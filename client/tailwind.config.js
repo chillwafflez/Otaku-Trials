@@ -11,6 +11,7 @@ export default {
         bar4: "#FFC8EE",
         bar5: "#FBCADD",
         bar6: "#FCE2EB",
+        guessbox: "#FFC8EE"
       }
     },
   },
