@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { GuessBar } from "../components/GuessBar";
 import { SoundBar } from "../components/SoundBar";
+import { MusicBar } from "../components/MusicBar";
 import { IoPlayOutline } from "react-icons/io5";
 import { FiSkipForward } from "react-icons/fi";
 import { CiPause1 } from "react-icons/ci";
@@ -17,6 +18,7 @@ function Heardle() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playTimes = [1, 2, 4, 8, 12, 16]
   const stopTimes = [6.25, 12.5, 25, 43.75, 68.75, 100]
+  const [animation, setAnimation] = useState(false);
 
   const [guess1, setGuess1] = useState("\u00A0");
   const [guess2, setGuess2] = useState("\u00A0");
@@ -62,6 +64,9 @@ function Heardle() {
       console.log("guess number: " + guessCount);
       text = "SKIPPED"
     } else {
+      if (guess == "") {
+        return;
+      }
 
       if (guess == answer) {
         console.log("user guessed correctly!");
@@ -103,6 +108,7 @@ function Heardle() {
       if (audioRef.current.paused) {
         audioRef.current.currentTime = 0;
         audioRef.current.play();
+        setAnimation(true);
         setPlaying(true);
       } else {
         stopTrack();
@@ -115,6 +121,7 @@ function Heardle() {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       setPlaying(false);
+      setAnimation(false);
     }
   }
 
@@ -123,7 +130,8 @@ function Heardle() {
 		<div className="flex flex-col justify-center items-center">
 
       {/* guess bars */}
-			<div className="flex flex-col flex-grow space-y-5 w-1/3 min-h-[550px] mt-16">
+			{/* <div className="flex flex-col flex-grow space-y-5 w-1/3 min-h-[550px] mt-16"> */}
+			<div className="flex flex-col flex-grow space-y-5 w-1/3 min-h-[500px] mt-16">
         <GuessBar guess={guess1} order={0} correct={false}/>
         <GuessBar guess={guess2} order={1} correct={false}/>
         <GuessBar guess={guess3} order={2} correct={false}/>
@@ -136,6 +144,8 @@ function Heardle() {
         <source src="https://a.animethemes.moe/RenaiFlops-OP1.ogg">
         </source>
       </audio>
+
+      <MusicBar play={animation}/>
 
       {/* bottom half */}
       <div className="flex flex-col items-center w-full border-t">
