@@ -24,7 +24,6 @@ function GuessBar(props: { guess: string, order: number, correct: boolean }) {
 	};
 
 	return (
-		// <div className={`border rounded-md py-4 px-3 text-white ${colors[props.order]}`}>
 		<div className={`border rounded-md py-4 px-3 ${textColors[props.order]} ${colors[props.order]}`}>
 		{props.guess}
 		</div>

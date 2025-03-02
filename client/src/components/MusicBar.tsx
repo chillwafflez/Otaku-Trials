@@ -24,13 +24,6 @@ function MusicBar(props: {play: boolean}) {
         <>
           {props.play ? (
           <div className="w-1/3 h-20 mb-2 flex gap-1 items-end justify-center">
-            {/* {bars.map((height, index) => (
-              <div
-                key={index}
-                className="w-2 bg-pink-300 transition-all duration-500 ease-in-out"
-                style={{ height: `${height}%` }}
-              ></div>
-            ))}  */}
             {bars.map((height, index) => {
               const randomPink = pinkShades[Math.floor(Math.random() * pinkShades.length)];
               return (
