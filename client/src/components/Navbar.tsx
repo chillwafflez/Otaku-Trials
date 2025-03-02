@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 import { GoGear } from "react-icons/go";
 import { BsBarChart } from "react-icons/bs";
 import { IoPersonOutline } from "react-icons/io5";
-import { useEffect, useState } from "react";
 
 
 function NavBar() {
