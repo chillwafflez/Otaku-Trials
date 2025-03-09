@@ -6,6 +6,7 @@ import { IoPlayOutline } from "react-icons/io5";
 import { FiSkipForward } from "react-icons/fi";
 import { CiPause1 } from "react-icons/ci";
 import { useNavigate } from 'react-router-dom';
+import "../styles/SearchBar.css"
 
 function Heardle() {
 
@@ -15,10 +16,13 @@ function Heardle() {
   const [guessCount, setGuessCount] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [searchResults, setSearchResults] = useState<string[]>([]);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playTimes = [1, 2, 4, 8, 12, 16]
   const stopTimes = [6.25, 12.5, 25, 43.75, 68.75, 100]
   const [animation, setAnimation] = useState(false);
+  const mockData = ["Hikaru Nara - Shigatsu wa Kimi no Uso", "Kaikai Kitan - Jujutsu Kaisen", "Unravel - Tokyo Ghoul", "Guren no Yumiya - Shingeki no Kyojin", "Red Swan - Shingeki no Kyojin", "Silhouette - Naruto Shippuden", "Again - Fullmetal Alchemist: Brotherhood", "Flyers - Death Parade", "BLOODY STREAM - JoJo no Kimyou na Bouken", "JoJo ~Sono Chi no Sadame - JoJo no Kimyou na Bouken", "Blue Bird - Naruto Shippuden", "Colors - Code Geass: Hangyaku no Lelouch", "Touch Off - Yakusoku no Neverland", "Gurenge - Kimetsu no Yaiba", "My Dearest - Guilty Crown", "The Day - Boku no Hero Academia", "Inferno - Enen no Shouboutai", "The Hero!! - One Punch Man", "Tank! - Cowboy Bebop"];
 
   const [guess1, setGuess1] = useState("\u00A0");
   const [guess2, setGuess2] = useState("\u00A0");
@@ -53,9 +57,27 @@ function Heardle() {
       navigate('/heardleresult');    
     }
   }, [guessCount])
+
+  // displays results based on what user types into search bar
+  const handleGuessChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const guessContent = e.target.value;
+    setGuess(guessContent);
+
+    if (guessContent.trim() === "") {
+      setSearchResults([]);
+    } else {
+      setSearchResults(mockData.filter(item => item.toLowerCase().includes(guess.toLowerCase())));
+    }
+  }
+
+  const handleResultSelection = (result: string) => {
+    setGuess(result);
+    setSearchResults([]);
+  }
   
 
-  const handleGuess = (skip: boolean) => {
+  // handles guess submission
+  const handleGuessSubmit = (skip: boolean) => {
     
     let text = "";
     if (skip) {
@@ -99,6 +121,8 @@ function Heardle() {
         setGuess6(text);
         break;
     }
+
+    setGuess("");
   }
 
   const playTrack = () => {
@@ -141,7 +165,7 @@ function Heardle() {
 			</div>
 
       <audio ref={audioRef} controls className="hidden">  
-        <source src="https://a.animethemes.moe/RenaiFlops-OP1.ogg">
+        <source src="https://a.animethemes.moe/JojoNoKimyouNaBouken-OP2.ogg">
         </source>
       </audio>
 
@@ -156,13 +180,28 @@ function Heardle() {
         {/* section containing skip button, input box for answer, and submission button */}
         <div className="flex w-full mt-6 items-center justify-center space-x-4">
           <div className="flex flex-1 justify-end">
-            <FiSkipForward className="text-white w-8 h-8 cursor-pointer" onClick={() => handleGuess(true)}/>
+            <FiSkipForward className="text-white w-8 h-8 cursor-pointer" onClick={() => handleGuessSubmit(true)}/>
           </div>
-          <input className="w-1/3 rounded-md py-4 px-3 border text-white focus:outline-none bg-zinc-800"
+
+          <div className="w-1/3 h-full relative">
+            {searchResults.length > 0 && (
+              <ul className="w-full absolute translate-y-[-100%] max-h-screen overflow-y-auto overflow-x-hidden scrollbar-hide">
+                {searchResults.map((result, index) => (
+                  <li key={index} className="bg-customBackground text-white p-3 border-t-[0.01rem] border-l-[0.01rem] border-r-[0.01rem]" 
+                                  onClick={() => handleResultSelection(result)}>{result}</li>
+                ))}
+            </ul>
+            )}
+            <input className="w-full rounded-md py-4 px-3 border text-white focus:outline-none bg-zinc-800" 
+                   value={guess}
+                   onChange={handleGuessChange}></input>
+          </div>
+
+          {/* <input className="w-1/3 rounded-md py-4 px-3 border text-white focus:outline-none bg-zinc-800"
                   value={guess}
-                  onChange={(e) => setGuess(e.target.value)}></input>
+                  onChange={(e) => setGuess(e.target.value)}></input> */}
           <div className="flex-1">
-            <button className="border w-24 py-4 px-3 text-white" onClick={() => handleGuess(false)}>Enter</button>
+            <button className="border w-24 py-4 px-3 text-white" onClick={() => handleGuessSubmit(false)}>Enter</button>
           </div>
         </div>
       </div>
