@@ -155,7 +155,7 @@ function Heardle() {
 
       {/* guess bars */}
 			{/* <div className="flex flex-col flex-grow space-y-5 w-1/3 min-h-[550px] mt-16"> */}
-			<div className="flex flex-col flex-grow space-y-5 w-1/3 min-h-[500px] mt-16">
+			<div className="flex flex-col flex-grow space-y-5 w-4/5 lg:w-1/3 lg:min-h-[500px] mt-10 lg:mt-16">
         <GuessBar guess={guess1} order={0} correct={false}/>
         <GuessBar guess={guess2} order={1} correct={false}/>
         <GuessBar guess={guess3} order={2} correct={false}/>
@@ -174,16 +174,16 @@ function Heardle() {
       {/* bottom half */}
       <div className="flex flex-col items-center w-full border-t">
         <SoundBar progress={progress} duration={playTimes[guessCount]} guessCount={guessCount}/>
-        {playing ? <CiPause1 className="text-white w-9 h-10 mt-6 cursor-pointer" onClick={playTrack}/> : 
-                    <IoPlayOutline className="text-white w-10 h-10 mt-6 cursor-pointer" onClick={playTrack}/>}
+        {playing ? <CiPause1 className="text-white w-10 h-10 mt-3 lg:mt-6 cursor-pointer" onClick={playTrack}/> : 
+                    <IoPlayOutline className="text-white w-10 h-10 mt-3 lg:mt-6 cursor-pointer" onClick={playTrack}/>}
         
         {/* section containing skip button, input box for answer, and submission button */}
-        <div className="flex w-full mt-6 items-center justify-center space-x-4">
+        <div className="hidden sm:flex w-full mt-3 lg:mt-6 items-center justify-center space-x-4">
           <div className="flex flex-1 justify-end">
             <FiSkipForward className="text-white w-8 h-8 cursor-pointer" onClick={() => handleGuessSubmit(true)}/>
           </div>
 
-          <div className="w-1/3 h-full relative">
+          <div className="w-4/5 lg:w-1/3 h-full relative">
             {searchResults.length > 0 && (
               <ul className="w-full absolute translate-y-[-100%] max-h-screen overflow-y-auto overflow-x-hidden scrollbar-hide">
                 {searchResults.map((result, index) => (
@@ -192,18 +192,38 @@ function Heardle() {
                 ))}
             </ul>
             )}
-            <input className="w-full rounded-md py-4 px-3 border text-white focus:outline-none bg-zinc-800" 
+            <input className="w-full rounded-md py-[0.9rem] lg:py-4 px-3 border text-white focus:outline-none bg-zinc-800" 
                    value={guess}
                    onChange={handleGuessChange}></input>
           </div>
 
-          {/* <input className="w-1/3 rounded-md py-4 px-3 border text-white focus:outline-none bg-zinc-800"
-                  value={guess}
-                  onChange={(e) => setGuess(e.target.value)}></input> */}
           <div className="flex-1">
-            <button className="border w-24 py-4 px-3 text-white" onClick={() => handleGuessSubmit(false)}>Enter</button>
+            <button className="border w-11 lg:w-24 py-4 px-1 lg:px-3 text-white" onClick={() => handleGuessSubmit(false)}>Enter</button>
           </div>
         </div>
+
+        {/* MOBILE LAYOUT: section containing skip button, input box for answer, and submission button */}
+        <div className="flex flex-col sm:hidden w-full mt-3 items-center justify-center">
+          <div className="w-4/5 h-full relative">
+            {searchResults.length > 0 && (
+              <ul className="w-full absolute translate-y-[-100%] max-h-screen overflow-y-auto overflow-x-hidden scrollbar-hide">
+                {searchResults.map((result, index) => (
+                  <li key={index} className="bg-customBackground text-white p-3 border-t-[0.01rem] border-l-[0.01rem] border-r-[0.01rem]" 
+                                  onClick={() => handleResultSelection(result)}>{result}</li>
+                ))}
+            </ul>
+            )}
+            <input className="w-full rounded-md py-[0.9rem] px-3 border text-white focus:outline-none bg-zinc-800" 
+                   value={guess}
+                   onChange={handleGuessChange}></input>
+          </div>
+
+          <div className="flex w-4/5 mt-3 items-center justify-between">
+              <FiSkipForward className="text-white w-8 h-8 cursor-pointer" onClick={() => handleGuessSubmit(true)}/>
+              <button className="border text-white py-2 px-3 text-lg" onClick={() => handleGuessSubmit(false)}>Enter</button>
+          </div>
+        </div>
+
       </div>
 		</div>
 	)
