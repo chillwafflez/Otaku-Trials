@@ -1,3 +1,4 @@
+// import { RxCross1 } from "react-icons/rx";
 
 function GuessBar(props: { guess: string, order: number, correct: boolean }) {
 
@@ -24,9 +25,15 @@ function GuessBar(props: { guess: string, order: number, correct: boolean }) {
 	};
 
 	return (
-		<div className={`border rounded-md py-4 px-3 ${textColors[props.order]} ${colors[props.order]}`}>
-		{props.guess}
+		<div className={`border rounded-md py-[0.9rem] lg:py-4 px-3 ${textColors[props.order]} ${colors[props.order]}`}>
+			{props.guess}
 		</div>
+
+		// <div className={`flex space-x-3 items-center border rounded-md py-[0.3rem] lg:py-2 px-3 ${textColors[props.order]} ${colors[props.order]}`}>
+		// 	<RxCross1 className={`w-7 h-7 ${colors[props.order]}`}/>
+		// 	<span className="my-2">{props.guess}</span>
+		// </div>
+
 	)
 }
 
