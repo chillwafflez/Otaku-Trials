@@ -13,18 +13,6 @@ function Game(props: {game: string, logo: string, bgColor: string}) {
         </span>
       </div>
     </div>
-
-
-    // <div className={`flex flex-col items-center justify-center border rounded-md bg-neutral-800`}>
-    //   <div className={`${props.bgColor} p-14 md:p-16 lg:p-20`}>
-    //     <img src={props.logo} className="w-16 border-pink-700 border"></img>
-    //   </div>
-    //   <div className="flex flex-col justify-center items-center p-2">
-    //     <a className="px-3 py-2 border rounded-md text-white text-xl md:text-2xl lg:text-3xl">
-    //       {props.game}
-    //     </a>
-    //   </div>
-    // </div>
   );
 }
 
