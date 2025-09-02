@@ -1,4 +1,5 @@
 from flask import Flask, Response, request, jsonify
+from flask_cors import CORS
 import csv
 import requests
 from db import get_connection_pool
@@ -6,7 +7,13 @@ from routes.daily import daily_bp
 
 
 app = Flask(__name__)
+CORS(
+  app,
+  resources={r"/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173"]}},
+  supports_credentials=True,   # only if you send cookies/auth
+)
 app.register_blueprint(daily_bp)
+
 
 @app.route("/", methods=['GET'])
 def home():
@@ -17,7 +24,9 @@ def home():
 def refresh_tracks():
   max_number_tracks = request.get_json()["max_number_tracks"]
   results = []
-  url = """https://api.animethemes.moe/anime?page[size]=100&sort=random
+  url = """https://api.animethemes.moe/anime
+    ?page[size]=100
+    &sort=random
     &include=images,animethemes.animethemeentries.videos.audio,animethemes.song.artists
     &filter[has]=animethemes
     &filter[animetheme][type]=OP
@@ -81,6 +90,8 @@ def refresh_tracks():
           moe_animetheme_id = theme["id"]
           slug = theme["slug"]
           songname = theme["song"]["title"]
+          if not songname:
+            songname = f"{anime} {slug}"
           moe_song_id = theme["song"]["id"]
           
           # extract artists
