@@ -7,22 +7,24 @@ import { FiSkipForward } from "react-icons/fi";
 import { CiPause1 } from "react-icons/ci";
 import { useNavigate } from 'react-router-dom';
 import "../styles/SearchBar.css"
+import { SearchResult, DailyTrack } from "../types/types.ts";
 
 function Heardle() {
 
   const navigate = useNavigate();
-  let answer: string = "Attack on Titan"
+  const [dailyTrack, setDailyTrack] = useState<DailyTrack | null>(null);
+  const [allSuggestions, setAllSuggestions] = useState<string[]>([]);   // full list
+  const [searchResults, setSearchResults] = useState<string[]>([]);     // filtered list that renders upon user input
   const [guess, setGuess] = useState("");
   const [guessCount, setGuessCount] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [searchResults, setSearchResults] = useState<string[]>([]);
 
+  const url = "http://127.0.0.1:5000/heardle/"
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const playTimes = [1, 2, 4, 8, 12, 16]
-  const stopTimes = [6.25, 12.5, 25, 43.75, 68.75, 100]
+  const playTimes = [1, 2, 4, 8, 12, 16];
+  const stopTimes = [6.25, 12.5, 25, 43.75, 68.75, 100];
   const [animation, setAnimation] = useState(false);
-  const mockData = ["Hikaru Nara - Shigatsu wa Kimi no Uso", "Kaikai Kitan - Jujutsu Kaisen", "Unravel - Tokyo Ghoul", "Guren no Yumiya - Shingeki no Kyojin", "Red Swan - Shingeki no Kyojin", "Silhouette - Naruto Shippuden", "Again - Fullmetal Alchemist: Brotherhood", "Flyers - Death Parade", "BLOODY STREAM - JoJo no Kimyou na Bouken", "JoJo ~Sono Chi no Sadame - JoJo no Kimyou na Bouken", "Blue Bird - Naruto Shippuden", "Colors - Code Geass: Hangyaku no Lelouch", "Touch Off - Yakusoku no Neverland", "Gurenge - Kimetsu no Yaiba", "My Dearest - Guilty Crown", "The Day - Boku no Hero Academia", "Inferno - Enen no Shouboutai", "The Hero!! - One Punch Man", "Tank! - Cowboy Bebop"];
 
   const [guess1, setGuess1] = useState("\u00A0");
   const [guess2, setGuess2] = useState("\u00A0");
@@ -30,6 +32,81 @@ function Heardle() {
   const [guess4, setGuess4] = useState("\u00A0");
   const [guess5, setGuess5] = useState("\u00A0");
   const [guess6, setGuess6] = useState("\u00A0");
+
+  // fetch daily track once on mount
+  useEffect(() => {
+    const fetchDaily = async () => {
+      try {
+        const res = await fetch(url + "tracks/daily");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data: DailyTrack = await res.json();
+        setDailyTrack(data);
+
+      } catch (error) {
+        console.error("Failed to fetch daily track:", error);
+      }
+    };
+    fetchDaily();
+  }, []);
+
+  // format daily track answer
+  const formatSuggestion = (track: DailyTrack["track"]) => {
+    let firstArtist: string = "";
+    if (track["artists"]?.length > 0) {
+      firstArtist = track["artists"][0]
+    }
+    return `${track["songName"]} | ${firstArtist} (${track["anime"]})`;
+  };
+
+  // set answer var
+  const answer = dailyTrack ? formatSuggestion(dailyTrack.track) : "";
+
+  // set audio tag to use daily track's ogg 
+  useEffect(() => {
+    if (audioRef.current && dailyTrack?.track.audio.ogg) {
+      audioRef.current.load();
+    }
+  }, [dailyTrack]);
+
+  // fetch all current heardle tracks once on mount
+  useEffect(() => {
+    const fetchTracks = async() => {
+      try {
+        const response = await fetch(url + "tracks");
+        const json = await response.json();
+        const tracks: SearchResult[] = [];
+        
+        json.forEach((res: any) => {
+          const Result: SearchResult  = {
+            trackID: res[0],
+            anime: res[1],
+            songName: res[2],
+            artists: res[3]
+          };
+          tracks.push(Result);
+        });
+
+        // process each track resource into string for search bar/results
+        let searchResultStrings: string[] = [];
+        tracks.forEach((track: SearchResult) => {
+          let firstArtist: string = "";
+          if (track["artists"]?.length > 0) {
+            firstArtist = track["artists"][0]
+          }
+          const resultString: string = `${track["songName"].trim()} | ${firstArtist.trim()} (${track["anime"].trim()})`;
+          searchResultStrings.push(resultString);
+        });
+
+        setAllSuggestions(searchResultStrings);
+        setSearchResults([]);
+        console.log("Fetched all current heardle tracks!");
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    fetchTracks();
+  }, []);
 
   useEffect(() => {
     const updateProgress = () => {
@@ -66,7 +143,7 @@ function Heardle() {
     if (guessContent.trim() === "") {
       setSearchResults([]);
     } else {
-      setSearchResults(mockData.filter(item => item.toLowerCase().includes(guess.toLowerCase())));
+      setSearchResults(allSuggestions.filter((s) => s.toLowerCase().includes(guessContent.toLowerCase())));
     }
   }
 
@@ -165,7 +242,7 @@ function Heardle() {
 			</div>
 
       <audio ref={audioRef} controls className="hidden">  
-        <source src="https://a.animethemes.moe/JojoNoKimyouNaBouken-OP2.ogg">
+        <source src={dailyTrack?.track.audio.ogg ?? ""}>
         </source>
       </audio>
 
@@ -185,7 +262,7 @@ function Heardle() {
 
           <div className="w-4/5 lg:w-1/3 h-full relative">
             {searchResults.length > 0 && (
-              <ul className="w-full absolute translate-y-[-100%] max-h-screen overflow-y-auto overflow-x-hidden scrollbar-hide">
+              <ul className="w-full absolute translate-y-[-100%] max-h-90vh overflow-y-auto overflow-x-hidden scrollbar-hide">
                 {searchResults.map((result, index) => (
                   <li key={index} className="bg-customBackground text-white p-3 border-t-[0.01rem] border-l-[0.01rem] border-r-[0.01rem]" 
                                   onClick={() => handleResultSelection(result)}>{result}</li>
