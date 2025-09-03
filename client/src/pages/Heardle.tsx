@@ -4,10 +4,12 @@ import { SoundBar } from "../components/SoundBar";
 import { MusicBar } from "../components/MusicBar";
 import { IoPlayOutline } from "react-icons/io5";
 import { FiSkipForward } from "react-icons/fi";
+import { FaRegQuestionCircle } from "react-icons/fa";
 import { CiPause1 } from "react-icons/ci";
 import { useNavigate } from 'react-router-dom';
 import "../styles/SearchBar.css"
-import { SearchResult, DailyTrack } from "../types/types.ts";
+import { SearchResult, DailyTrack, GameState } from "../types/types.ts";
+import { saveGameState, fetchGameState, clearGameState } from "../utils/GameState.ts";
 
 function Heardle() {
 
@@ -15,8 +17,6 @@ function Heardle() {
   const [dailyTrack, setDailyTrack] = useState<DailyTrack | null>(null);
   const [allSuggestions, setAllSuggestions] = useState<string[]>([]);   // full list
   const [searchResults, setSearchResults] = useState<string[]>([]);     // filtered list that renders upon user input
-  const [guess, setGuess] = useState("");
-  const [guessCount, setGuessCount] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -26,12 +26,16 @@ function Heardle() {
   const stopTimes = [6.25, 12.5, 25, 43.75, 68.75, 100];
   const [animation, setAnimation] = useState(false);
 
+  const [gameState, setGameState] = useState<GameState | null>(null);
+
+  const [guess, setGuess] = useState("");
+  const [guessCount, setGuessCount] = useState(0);
   const [guess1, setGuess1] = useState("\u00A0");
   const [guess2, setGuess2] = useState("\u00A0");
   const [guess3, setGuess3] = useState("\u00A0");
   const [guess4, setGuess4] = useState("\u00A0");
   const [guess5, setGuess5] = useState("\u00A0");
-  const [guess6, setGuess6] = useState("\u00A0");
+  const [guess6, setGuess6] = useState("\u00A0");  
 
   // fetch daily track once on mount
   useEffect(() => {
@@ -49,16 +53,15 @@ function Heardle() {
     fetchDaily();
   }, []);
 
-  // format daily track answer
-  const formatSuggestion = (track: DailyTrack["track"]) => {
+  const formatSuggestion = (track: {"songName": string, "artists": string[], "anime": string}) => {
     let firstArtist: string = "";
     if (track["artists"]?.length > 0) {
       firstArtist = track["artists"][0]
     }
-    return `${track["songName"]} | ${firstArtist} (${track["anime"]})`;
+    return `${track["songName"].trim()} | ${firstArtist.trim()} (${track["anime"].trim()})`;
   };
 
-  // set answer var
+  // set answer from dailyTrack
   const answer = dailyTrack ? formatSuggestion(dailyTrack.track) : "";
 
   // set audio tag to use daily track's ogg 
@@ -89,11 +92,7 @@ function Heardle() {
         // process each track resource into string for search bar/results
         let searchResultStrings: string[] = [];
         tracks.forEach((track: SearchResult) => {
-          let firstArtist: string = "";
-          if (track["artists"]?.length > 0) {
-            firstArtist = track["artists"][0]
-          }
-          const resultString: string = `${track["songName"].trim()} | ${firstArtist.trim()} (${track["anime"].trim()})`;
+          const resultString: string = formatSuggestion(track)
           searchResultStrings.push(resultString);
         });
 
@@ -107,6 +106,42 @@ function Heardle() {
 
     fetchTracks();
   }, []);
+
+  const updateUIFromState = (state: GameState) => {
+    setGuessCount(state.currGuessIndex);
+    const guesses = state.guesses;
+    setGuess1(guesses[0] ?? "\u00A0");
+    setGuess2(guesses[1] ?? "\u00A0");
+    setGuess3(guesses[2] ?? "\u00A0");
+    setGuess4(guesses[3] ?? "\u00A0");
+    setGuess5(guesses[4] ?? "\u00A0");
+    setGuess6(guesses[5] ?? "\u00A0");
+  }
+
+  // when the daily track arrives, load/init game state
+  useEffect(() => {
+    if (!dailyTrack) return;
+
+    const savedState = fetchGameState();
+    // if there is already a saved state and it matches the current daily song, fetch it (continue where we left off)
+    if (savedState && savedState.dailyID === dailyTrack.track.id) {
+      setGameState(savedState);
+      updateUIFromState(savedState);
+    } else {
+      // new day or no save: start fresh
+      const newState: GameState = {
+        dailyID: dailyTrack.track.id,
+        guesses: [],
+        currGuessIndex: 0,
+        status: "IN_PROGRESS",
+        timestamp: Date.now(),
+      };
+      clearGameState();             // clears old day’s state if there is any
+      setGameState(newState);
+      saveGameState(newState);      // save new game state into LS
+      updateUIFromState(newState);
+    }
+  }, [dailyTrack]);
 
   useEffect(() => {
     const updateProgress = () => {
@@ -128,12 +163,12 @@ function Heardle() {
     return () => clearInterval(interval);
   }, [guessCount, playing]);
 
-  useEffect(() => {
-    if (guessCount == 6) {
-      console.log("number of guesses used up");
-      navigate('/heardleresult');    
-    }
-  }, [guessCount])
+  // useEffect(() => {
+  //   if (guessCount == 6) {
+  //     console.log("number of guesses used up");
+  //     navigate('/heardleresult');    
+  //   }
+  // }, [guessCount])
 
   // displays results based on what user types into search bar
   const handleGuessChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -152,54 +187,60 @@ function Heardle() {
     setSearchResults([]);
   }
   
-
   // handles guess submission
   const handleGuessSubmit = (skip: boolean) => {
+    if (!gameState) return;
+
+    let text = skip ? "SKIPPED" : guess.trim();
+    if (!skip && text == "") {
+      return;
+    }
+
+    const isCorrect = !skip && text === answer;
+    const nextGuessID = Math.min(gameState.currGuessIndex + 1, 6);
     
-    let text = "";
-    if (skip) {
-      setGuessCount((prev) => Math.min(prev + 1, 6));
-      console.log("user skipped");
-      console.log("guess number: " + guessCount);
-      text = "SKIPPED"
+    let nextStatus = "";
+    if (isCorrect) {
+      nextStatus = "SUCCESS";
+    } else if (nextGuessID >= 6) {
+      nextStatus = "FAIL";
     } else {
-      if (guess == "") {
-        return;
-      }
-
-      if (guess == answer) {
-        console.log("user guessed correctly!");
-        navigate('/heardleresult');   
-      } else {
-        setGuessCount((prev) => Math.min(prev + 1, 6));
-        console.log("guess number: " + guessCount);
-        console.log("actual guess: " + guess);
-        text = guess;
-      }
+      nextStatus = "IN_PROGRESS";
     }
 
-    switch (guessCount) {
+    const nextState: GameState = {
+      dailyID: gameState.dailyID,
+      guesses: [...gameState.guesses, text],
+      currGuessIndex: nextGuessID,
+      status: nextStatus,
+      timestamp: gameState.timestamp
+    };
+
+    // update ui for current row index before updating game state
+    switch (gameState.currGuessIndex) {
       case 0:
-        setGuess1(text);
-        break;
+        setGuess1(text); break;
       case 1:
-        setGuess2(text);
-        break;
+        setGuess2(text); break;
       case 2:
-        setGuess3(text);
-        break;
+        setGuess3(text); break;
       case 3:
-        setGuess4(text);
-        break;
+        setGuess4(text); break;
       case 4:
-        setGuess5(text);
-        break;
+        setGuess5(text); break;
       case 5:
-        setGuess6(text);
-        break;
+        setGuess6(text); break;
     }
 
+    saveGameState(nextState);
+    setGameState(nextState);
+    setGuessCount(nextGuessID);
     setGuess("");
+
+    if (isCorrect || nextGuessID >= 6) {
+      navigate('/heardleresult');
+      return;
+    }
   }
 
   const playTrack = () => {
@@ -256,7 +297,8 @@ function Heardle() {
         
         {/* section containing skip button, input box for answer, and submission button */}
         <div className="hidden sm:flex w-full mt-3 lg:mt-6 items-center justify-center space-x-4">
-          <div className="flex flex-1 justify-end">
+          <div className="flex flex-1 justify-end space-x-2">
+            <FaRegQuestionCircle className="text-white w-8 h-8 cursor-pointer" />
             <FiSkipForward className="text-white w-8 h-8 cursor-pointer" onClick={() => handleGuessSubmit(true)}/>
           </div>
 
@@ -296,7 +338,11 @@ function Heardle() {
           </div>
 
           <div className="flex w-4/5 mt-3 items-center justify-between">
-              <FiSkipForward className="text-white w-8 h-8 cursor-pointer" onClick={() => handleGuessSubmit(true)}/>
+              <div className="flex space-x-1">
+                <FaRegQuestionCircle className="text-white w-8 h-8 cursor-pointer" />
+                <FiSkipForward className="text-white w-8 h-8 cursor-pointer" onClick={() => handleGuessSubmit(true)}/>
+              </div>
+              {/* <FiSkipForward className="text-white w-8 h-8 cursor-pointer" onClick={() => handleGuessSubmit(true)}/> */}
               <button className="border text-white py-2 px-3 text-lg" onClick={() => handleGuessSubmit(false)}>Enter</button>
           </div>
         </div>
