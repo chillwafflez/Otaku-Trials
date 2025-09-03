@@ -19,3 +19,11 @@ export interface DailyTrack {
     synopsis: string;
   };
 }
+
+export interface GameState {
+  dailyID: number;
+  guesses: string[];
+  currGuessIndex: number;
+  status: string;
+  timestamp: number;  // when the user started the game
+}
