@@ -37,6 +37,32 @@ function Heardle() {
   const [guess5, setGuess5] = useState("\u00A0");
   const [guess6, setGuess6] = useState("\u00A0");  
 
+  // ---- functions ---- //
+
+  const formatSuggestion = (track: {"songName": string, "artists": string[], "anime": string}) => {
+    let firstArtist: string = "";
+    if (track["artists"]?.length > 0) {
+      firstArtist = track["artists"][0]
+    }
+    return `${track["songName"].trim()} | ${firstArtist.trim()} (${track["anime"].trim()})`;
+  };
+
+  const updateUIFromState = (state: GameState) => {
+    setGuessCount(state.currGuessIndex);
+    const guesses = state.guesses;
+    setGuess1(guesses[0] ?? "\u00A0");
+    setGuess2(guesses[1] ?? "\u00A0");
+    setGuess3(guesses[2] ?? "\u00A0");
+    setGuess4(guesses[3] ?? "\u00A0");
+    setGuess5(guesses[4] ?? "\u00A0");
+    setGuess6(guesses[5] ?? "\u00A0");
+  }
+
+  // set answer from dailyTrack
+  const answer = dailyTrack ? formatSuggestion(dailyTrack.track) : "";
+
+  // ---- effects ---- //
+
   // fetch daily track once on mount
   useEffect(() => {
     const fetchDaily = async () => {
@@ -52,17 +78,6 @@ function Heardle() {
     };
     fetchDaily();
   }, []);
-
-  const formatSuggestion = (track: {"songName": string, "artists": string[], "anime": string}) => {
-    let firstArtist: string = "";
-    if (track["artists"]?.length > 0) {
-      firstArtist = track["artists"][0]
-    }
-    return `${track["songName"].trim()} | ${firstArtist.trim()} (${track["anime"].trim()})`;
-  };
-
-  // set answer from dailyTrack
-  const answer = dailyTrack ? formatSuggestion(dailyTrack.track) : "";
 
   // set audio tag to use daily track's ogg 
   useEffect(() => {
@@ -107,30 +122,19 @@ function Heardle() {
     fetchTracks();
   }, []);
 
-  const updateUIFromState = (state: GameState) => {
-    setGuessCount(state.currGuessIndex);
-    const guesses = state.guesses;
-    setGuess1(guesses[0] ?? "\u00A0");
-    setGuess2(guesses[1] ?? "\u00A0");
-    setGuess3(guesses[2] ?? "\u00A0");
-    setGuess4(guesses[3] ?? "\u00A0");
-    setGuess5(guesses[4] ?? "\u00A0");
-    setGuess6(guesses[5] ?? "\u00A0");
-  }
-
   // when the daily track arrives, load/init game state
   useEffect(() => {
     if (!dailyTrack) return;
 
     const savedState = fetchGameState();
     // if there is already a saved state and it matches the current daily song, fetch it (continue where we left off)
-    if (savedState && savedState.dailyID === dailyTrack.track.id) {
+    if (savedState && savedState.dailyID === dailyTrack.track.track_id) {
       setGameState(savedState);
       updateUIFromState(savedState);
     } else {
       // new day or no save: start fresh
       const newState: GameState = {
-        dailyID: dailyTrack.track.id,
+        dailyID: dailyTrack.track.track_id,
         guesses: [],
         currGuessIndex: 0,
         status: "IN_PROGRESS",
@@ -143,6 +147,7 @@ function Heardle() {
     }
   }, [dailyTrack]);
 
+  // update progress animation
   useEffect(() => {
     const updateProgress = () => {
       if (audioRef.current && !audioRef.current.paused) {
@@ -170,6 +175,8 @@ function Heardle() {
   //   }
   // }, [guessCount])
 
+  // ---- handlers ---- //
+
   // displays results based on what user types into search bar
   const handleGuessChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const guessContent = e.target.value;
@@ -191,6 +198,7 @@ function Heardle() {
   const handleGuessSubmit = (skip: boolean) => {
     if (!gameState) return;
 
+    // if user entered nothing, don't execute
     let text = skip ? "SKIPPED" : guess.trim();
     if (!skip && text == "") {
       return;

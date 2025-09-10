@@ -4,6 +4,8 @@ import csv
 import requests
 from db import get_connection_pool
 from routes.daily import daily_bp
+import time
+import random
 
 
 app = Flask(__name__)
@@ -24,34 +26,40 @@ def home():
 def refresh_tracks():
   max_number_tracks = request.get_json()["max_number_tracks"]
   results = []
-  url = """https://api.animethemes.moe/anime
-    ?page[size]=100
-    &sort=random
-    &include=images,animethemes.animethemeentries.videos.audio,animethemes.song.artists
-    &filter[has]=animethemes
-    &filter[animetheme][type]=OP
-    &fields[anime]=id,name,year,synopsis
-    &fields[animetheme]=id,slug
-    &fields[animethemeentry]=id
-    &fields[video]=id
-    &fields[audio]=link
-    &fields[artist]=name
-    &fields[image]=link
-  """
+  # url = """https://api.animethemes.moe/anime
+  #   ?page[size]=100
+  #   &sort=random
+  #   &include=images,animethemes.animethemeentries.videos.audio,animethemes.song.artists
+  #   &filter[has]=animethemes
+  #   &filter[animetheme][type]=OP
+  #   &fields[anime]=id,name,year,synopsis
+  #   &fields[animetheme]=id,slug
+  #   &fields[animethemeentry]=id
+  #   &fields[video]=id
+  #   &fields[audio]=link
+  #   &fields[artist]=name
+  #   &fields[image]=link
+  # """
+  url = """https://api.animethemes.moe/anime?page[size]=100&sort=random&include=images,animethemes.animethemeentries.videos.audio,animethemes.song.artists&filter[has]=animethemes&filter[animetheme][type]=OP&fields[anime]=id,name,year,synopsis&fields[animetheme]=id,slug&fields[animethemeentry]=id&fields[video]=id,link&fields[audio]=link&fields[artist]=name&fields[image]=link"""
 
   missing_data_tracker = {
     "no_animethemes": 0,
     "no_animethemeentries": 0,
+    "duplicate_entry": 0,
     "no_videos": 0,
     "no_audio": 0,
     "images": 0,
     "missing_required_ids": 0
   }
 
+  seen_entries = set()
   pool = None
   conn = None
   try:
     while url and len(results) < max_number_tracks:     
+      random_pause = random.randint(3, 8)
+      print(f"pausing for {random_pause} seconds")
+      time.sleep(random_pause)
       response = requests.get(url)
 
       if response.status_code != 200:
@@ -63,24 +71,26 @@ def refresh_tracks():
 
       for anime in animes:
         moe_anime_id = anime["id"]
-        anime_name = anime["name"].strip()
-        year = anime["year"]
+        anime_name = anime["name"].strip() if anime["name"] else ""
+        year = anime["year"] if anime["year"] else None
         synopsis = anime["synopsis"].replace('\n', '').replace("\r", "").strip() if anime["synopsis"] else ""
+        if (anime_name == ""):
+          print("SKIP: resource has no anime name")
+          continue
 
         # extract image
         images = anime.get("images") or []
         image_url = None
-        images = anime.get("images") or []
         if len(images) > 1 and images[1].get("link"):
           image_url = images[1]["link"]
-        elif len(images) >= 1:
+        elif len(images) >= 1 and images[0].get("link"):
           image_url = images[0].get("link")
         else:
           image_url = None
           missing_data_tracker["images_missing"] += 1
 
         # extract OPs
-        animethemes = anime["animethemes"]
+        animethemes = anime.get("animethemes") or []
         if not animethemes:
           print("SKIP: resource has no anime themes")
           missing_data_tracker["no_animethemes"] += 1
@@ -89,34 +99,49 @@ def refresh_tracks():
         for theme in animethemes:
           moe_animetheme_id = theme["id"]
           slug = theme["slug"]
-          songname = theme["song"]["title"]
+          song = theme["song"]
+          if not song:
+            print("SKIP: theme resource has no song info")
+            continue
+
+          moe_song_id = song["id"]
+          songname = song["title"]
           if not songname:
-            songname = f"{anime} {slug}"
-          moe_song_id = theme["song"]["id"]
+            songname = f"{anime_name} {slug}"
           
           # extract artists
           artists = []
-          song_artists = theme["song"]["artists"]
+          song_artists = song.get("artists") or []
           for artist in song_artists:
             artists.append(artist["name"].strip())
 
-          animethemeentries = theme["animethemeentries"]
+          animethemeentries = theme.get("animethemeentries") or []
           if not animethemeentries:
             print("SKIP: resource has no anime theme entries")
             missing_data_tracker["no_animethemeentries"] += 1
             continue
+
           theme_entry = animethemeentries[0] # even if there are multiple version of the OP, just get the first one
           moe_entry_id = theme_entry["id"]
+          # skip if we've already seen this entry (specific opening)
+          if moe_entry_id in seen_entries:
+            print("SKIP: already have this theme entry (opening)")
+            missing_data_tracker["duplicate_entry"] += 1
+            continue
+          seen_entries.add(moe_entry_id)
 
           # extract ogg url
-          videos = theme_entry["videos"]
+          videos = theme_entry.get("videos") or []
           if not videos:
             print("SKIP: resource's anime entry has no videos")
             missing_data_tracker["no_videos"] += 1
             continue
 
           audio_ogg_url = None
-          if not videos[0]["audio"]["link"]:
+          first_video = videos[0] or {}
+          audio = first_video.get("audio") or {}
+          audio_ogg_url = audio.get("link")
+          if not audio_ogg_url:
             print("SKIP: resource's video has no audio link")
             missing_data_tracker["no_audio"] += 1
             continue
@@ -169,6 +194,7 @@ def refresh_tracks():
     return jsonify(results), 201
 
   except Exception as e:
+    print(e)
     response = {
       "status": "Error adding refreshing track list in database", 
       "exception": str(e)
