@@ -2,6 +2,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from flask import Blueprint, jsonify
 from db import get_connection_pool
+import requests
 
 daily_bp = Blueprint("daily", __name__)
 
@@ -39,7 +40,7 @@ def get_daily():
     with conn.cursor() as cur:
       query = """
         SELECT d.date_chosen,
-                t.track_id, t.anime, t.song_name, t.slug,
+                t.track_id, t.moe_anime_id, t.moe_animethemeentry_id, t.anime, t.song_name, t.slug,
                 t.audio_ogg_url, t.image_url, t.artists, t.year, t.synopsis
         FROM heardle_daily d
         JOIN tracks t on t.track_id = d.track_id
@@ -54,16 +55,100 @@ def get_daily():
     return jsonify({
       "date": str(row[0]),
       "track": {
-          "id": row[1],
-          "anime": row[2],
-          "songName": row[3],
-          "slug": row[4],
-          "audio": {"ogg": row[5]},
-          "image": row[6],
-          "artists": row[7],
-          "year": row[8],
-          "synopsis": row[9]
+          "track_id": row[1],
+          "moe_anime_id": row[2],
+          "moe_animethemeentry_id": row[3],
+          "anime": row[4],
+          "songName": row[5],
+          "slug": row[6],
+          "audio": {"ogg": row[7]},
+          "image": row[8],
+          "artists": row[9],
+          "year": row[10],
+          "synopsis": row[11]
       }
     }), 200
+  finally:
+    pool.putconn(conn)
+
+
+@daily_bp.route("/heardle/tracks/daily/full", methods=["GET"])
+def get_daily_full():
+  pool = get_connection_pool()
+  game_date = get_pt_today_date()
+  # game_date = "2025-08-29"
+  # print(f"game date = {game_date}")
+  conn = pool.getconn()
+  try:
+    ensure_daily_pick(conn, game_date)
+    with conn.cursor() as cur:
+      query = """
+        SELECT d.date_chosen,
+                t.track_id, t.moe_anime_id, t.moe_animethemeentry_id, t.anime, t.song_name, t.slug,
+                t.audio_ogg_url, t.image_url, t.artists, t.year, t.synopsis
+        FROM heardle_daily d
+        JOIN tracks t on t.track_id = d.track_id
+        WHERE d.date_chosen = %s::DATE;        
+      """
+      cur.execute(query, (game_date,))
+
+      row = cur.fetchone()
+    if not row:
+      return jsonify({"status": "No daily track found"}), 404
+    
+    base_data = {
+      "date": str(row[0]),
+      "track": {
+          "track_id": row[1],
+          "moe_anime_id": row[2],
+          "moe_animethemeentry_id": row[3],
+          "anime": row[4],
+          "songName": row[5],
+          "slug": row[6],
+          "audio": {"ogg": row[7]},
+          "image": row[8],
+          "artists": row[9],
+          "year": row[10],
+          "synopsis": row[11]
+      }
+    }
+
+    moe_anime_id = base_data["track"]["moe_anime_id"]
+    moe_animethemeenetry_d = base_data["track"]["moe_animethemeentry_id"]
+
+    # fetch video url from moe_anime_themes_api
+    moe_api_video_url = f"https://api.animethemes.moe/animethemeentry/{moe_animethemeenetry_d}?include=videos&fields[video]=id,link"
+    response = requests.get(moe_api_video_url)
+    if response.status_code != 200:
+      print('Error fetching video url for daily track:', response.status_code)
+    response_json = response.json()
+    videos = (response_json.get("animethemeentry") or {}).get("videos") or []
+    first_video = videos[0]
+    video_url = first_video.get("link") or ""
+
+    # fetch season and studios from moe_anime_themes_api
+    moe_extra_anime_info_url = f"https://api.animethemes.moe/anime?include=studios&filter[anime][id]={moe_anime_id}&fields[anime]=season&fields[studio]=name"
+    response = requests.get(moe_extra_anime_info_url)
+    if response.status_code != 200:
+      print('Error fetching video url for daily track:', response.status_code)
+    response_json = response.json()
+
+    anime = response_json.get("anime") or []
+    if not anime:
+      print("Error fetching video url, studios, and season for anime resource")
+      return jsonify(base_data), 200
+
+    season = anime[0].get("season") or ""
+    studios = anime[0].get("studios") or []
+    formatted_studios = []
+    for studio in studios:
+      formatted_studios.append(studio.get("name") or "")
+
+    base_data["track"]["video_url"] = video_url
+    base_data["track"]["season"] = season
+    base_data["track"]["studios"] = formatted_studios
+
+
+    return jsonify(base_data), 200
   finally:
     pool.putconn(conn)
