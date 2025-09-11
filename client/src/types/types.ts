@@ -8,7 +8,9 @@ export interface SearchResult {
 export interface DailyTrack {
   date: string;
   track: {
-    id: number;
+    track_id: number;
+    moe_anime_id: number;
+    moe_animethemeentry_id: number;
     anime: string;
     songName: string;
     slug: string;
@@ -17,6 +19,26 @@ export interface DailyTrack {
     artists: string[];
     year: number;
     synopsis: string;
+  };
+}
+
+export interface DailyTrackTest {
+  date: string;
+  track: {
+    track_id: number;
+    moe_anime_id: number;
+    moe_animethemeentry_id: number;
+    anime: string;
+    songName: string;
+    slug: string;
+    audio: { ogg: string };
+    video_url?: string;
+    image: string;
+    artists: string[];
+    year: number;
+    season: string;
+    synopsis: string;
+    studios?: string[];
   };
 }
 
