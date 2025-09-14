@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { GuessBar } from "../components/GuessBar";
 import { SoundBar } from "../components/SoundBar";
 import { MusicBar } from "../components/MusicBar";
+import { AboutHeardleModal } from "../components/AboutHeardleModal.tsx";
 import { IoPlayOutline } from "react-icons/io5";
 import { FiSkipForward } from "react-icons/fi";
 import { FaRegQuestionCircle } from "react-icons/fa";
@@ -17,6 +18,7 @@ function Heardle() {
   const [dailyTrack, setDailyTrack] = useState<DailyTrack | null>(null);
   const [allSuggestions, setAllSuggestions] = useState<string[]>([]);   // full list
   const [searchResults, setSearchResults] = useState<string[]>([]);     // filtered list that renders upon user input
+  const [modalVisible, setModalVisible] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -306,8 +308,9 @@ function Heardle() {
         {/* section containing skip button, input box for answer, and submission button */}
         <div className="hidden sm:flex w-full mt-3 lg:mt-6 items-center justify-center space-x-4">
           <div className="flex flex-1 justify-end space-x-2">
-            <FaRegQuestionCircle className="text-white w-8 h-8 cursor-pointer" />
-            <FiSkipForward className="text-white w-8 h-8 cursor-pointer" onClick={() => handleGuessSubmit(true)}/>
+            <FaRegQuestionCircle className="text-white hover:text-bar1 w-8 h-8 cursor-pointer" 
+                                 onClick={() => setModalVisible(true)} />
+            <FiSkipForward className="text-white hover:text-bar1 w-8 h-8 cursor-pointer" onClick={() => handleGuessSubmit(true)}/>
           </div>
 
           <div className="w-4/5 lg:w-1/3 h-full relative">
@@ -325,7 +328,7 @@ function Heardle() {
           </div>
 
           <div className="flex-1">
-            <button className="border w-11 lg:w-24 py-4 px-1 lg:px-3 text-white" onClick={() => handleGuessSubmit(false)}>Enter</button>
+            <button className="border w-11 lg:w-24 py-4 px-1 lg:px-3 text-white hover:bg-bar1" onClick={() => handleGuessSubmit(false)}>Enter</button>
           </div>
         </div>
 
@@ -347,15 +350,17 @@ function Heardle() {
 
           <div className="flex w-4/5 mt-3 items-center justify-between">
               <div className="flex space-x-1">
-                <FaRegQuestionCircle className="text-white w-8 h-8 cursor-pointer" />
-                <FiSkipForward className="text-white w-8 h-8 cursor-pointer" onClick={() => handleGuessSubmit(true)}/>
+                <FaRegQuestionCircle className="text-white hover:text-bar1 w-8 h-8 cursor-pointer"
+                                     onClick={() => setModalVisible(true)} />
+                <FiSkipForward className="text-white hover:text-bar1 w-8 h-8 cursor-pointer" onClick={() => handleGuessSubmit(true)}/>
               </div>
-              {/* <FiSkipForward className="text-white w-8 h-8 cursor-pointer" onClick={() => handleGuessSubmit(true)}/> */}
               <button className="border text-white py-2 px-3 text-lg" onClick={() => handleGuessSubmit(false)}>Enter</button>
           </div>
         </div>
 
       </div>
+
+      {modalVisible && <AboutHeardleModal onClose={() => setModalVisible(false)} />}
 		</div>
 	)
 }

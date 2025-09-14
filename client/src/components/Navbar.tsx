@@ -1,10 +1,22 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation  } from "react-router-dom";
 import { GoGear } from "react-icons/go";
 import { BsBarChart } from "react-icons/bs";
 import { IoPersonOutline } from "react-icons/io5";
 
 
 function NavBar() {
+	const location = useLocation();
+	 
+	const setNavBarText = () => {
+		switch (location.pathname) {
+			case "/":
+				return "Home";
+			case "/Heardle":
+				return "Daily Heardle";
+			default:
+				return "Welcome";
+		}
+	};
 
   return (
     <>
@@ -16,7 +28,7 @@ function NavBar() {
 					</a>						
 
 					<div className="flex-grow text-2xl lg:text-3xl text-center">
-							Daily Heardle
+						{setNavBarText()}
 					</div>
 
 					<ul className="flex flex-1 space-x-1 justify-end">

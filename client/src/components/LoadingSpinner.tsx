@@ -9,14 +9,14 @@ function LoadingSpinner () {
         <div className='lg-hidden flex-col items-center justify-center'>
           <img
             src={gifPath}
-            className='rounded-md w-36 h-36 mx-auto '>
+            className='rounded-md w-36 mx-auto '>
           </img>
         </div>
 
         <div className='hidden flex-col items-center justify-center'>
           <img
             src={gifPath}
-            className='rounded-md w-56 h-56 mx-auto '>
+            className='rounded-md w-56 mx-auto '>
           </img>
         </div>
       </div>

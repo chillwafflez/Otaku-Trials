@@ -20,10 +20,9 @@ function MobileLayout({ data, status }: { data: DailyTrackTest, status: string }
       <video
         src={data.track.video_url}
         controls
-        autoPlay={true}
+        autoPlay={false}
         loop
         className="mt-3 mb-5 h-auto mx-auto rounded-lg"
-        // style={{ minHeight: "30vh", maxHeight: "65vh" }}
       ></video>
 
       {/* title + synopsis */}
@@ -86,7 +85,7 @@ function RegularLayout({ data, status }: { data: DailyTrackTest, status:string }
           <video
             src={data.track.video_url}
             controls
-            autoPlay={true}
+            autoPlay={false}
             loop
             className="mt-3 mb-5 h-auto mx-auto rounded"
           ></video>
