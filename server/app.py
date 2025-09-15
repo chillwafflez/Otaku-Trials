@@ -2,10 +2,11 @@ from flask import Flask, Response, request, jsonify
 from flask_cors import CORS
 import csv
 import requests
-from db import get_connection_pool
+from db import get_connection_pool, get_conn_from_pool, return_conn
 from routes.daily import daily_bp
 import time
 import random
+from psycopg2 import OperationalError, InterfaceError
 
 
 app = Flask(__name__)
@@ -208,27 +209,42 @@ def refresh_tracks():
 
 @app.route("/heardle/tracks", methods=['GET'])
 def fetch_tracks():
+  pool, conn = get_conn_from_pool()
+  if pool is None or conn is None:
+    return jsonify({
+      "status": "DB conection failed"
+    }), 503
+
   try:
-    pool = get_connection_pool()
-    with pool.getconn() as conn:
+    with conn.cursor() as cur:
+      cur.execute("SELECT track_id, anime, song_name, artists FROM tracks;")
+      rows = cur.fetchall()
+      return jsonify(rows), 200
+    
+  # retry once with a fresh connection in case the server closed SSL
+  except (OperationalError, InterfaceError):
+    return_conn(pool, conn, close=True)
+    pool, conn = get_conn_from_pool()
+    if pool is None or conn is None:
+      return jsonify({
+        "status": "DB conection failed"
+      }), 503
+    
+    try:
       with conn.cursor() as cur:
         cur.execute("SELECT track_id, anime, song_name, artists FROM tracks;")
-        rows = cur.fetchall()
+        rows.cur.fetchall()
         return jsonify(rows), 200
-      
-    response = {
-      "status": "Unable to fetch Heardle tracks", 
-      "exception": e
-    }  
-    return jsonify(response), 404
+    except Exception as e:
+      return jsonify({"status": "Unable to fetch Heardle tracks (retry)",
+                      "exception": str(e)}), 500
+
   except Exception as e:
-    response = {
-      "status": "Unable to fetch Heardle tracks", 
-      "exception": e
-    }  
-    return jsonify(response), 404
+    return jsonify({"status": "Unable to fetch Heardle tracks",
+                    "exception": str(e)}), 500
+
   finally:
-    pool.putconn(conn)
+    return_conn(pool, conn)
 
 
 if __name__ == '__main__':
