@@ -1,8 +1,9 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from flask import Blueprint, jsonify
-from db import get_connection_pool
+from db import get_conn_from_pool, return_conn
 import requests
+from psycopg2 import OperationalError, InterfaceError
 
 daily_bp = Blueprint("daily", __name__)
 
@@ -30,13 +31,17 @@ def ensure_daily_pick(conn, game_date):
 
 @daily_bp.route("/heardle/tracks/daily", methods=["GET"])
 def get_daily():
-  pool = get_connection_pool()
   game_date = get_pt_today_date()
   # game_date = "2025-08-29"
   # print(f"game date = {game_date}")
-  conn = pool.getconn()
+
+  pool, conn = get_conn_from_pool()
+  if pool is None or conn is None:
+    return jsonify({"status": "DB connection failed"}), 503
+  
   try:
     ensure_daily_pick(conn, game_date)
+
     with conn.cursor() as cur:
       query = """
         SELECT d.date_chosen,
@@ -69,27 +74,69 @@ def get_daily():
       }
     }), 200
   
+  # retry once if neon dropped SSL connection
+  except (OperationalError, InterfaceError):
+    return_conn(pool, conn, close=True)
+    pool, conn = get_conn_from_pool()
+    if pool is None or conn is None:
+        return jsonify({"status": "DB reconnection failed"}), 503
+    try:
+      ensure_daily_pick(conn, game_date)
+      with conn.cursor() as cur:
+        query = """
+          SELECT d.date_chosen,
+                  t.track_id, t.moe_anime_id, t.moe_animethemeentry_id, t.anime, t.song_name, t.slug,
+                  t.audio_ogg_url, t.image_url, t.artists, t.year, t.synopsis
+          FROM heardle_daily d
+          JOIN tracks t on t.track_id = d.track_id
+          WHERE d.date_chosen = %s::DATE;        
+        """
+        cur.execute(query, (game_date,))
+
+        row = cur.fetchone()
+      if not row:
+        return jsonify({"status": "No daily track found"}), 404
+      
+      return jsonify({
+        "date": str(row[0]),
+        "track": {
+            "track_id": row[1],
+            "moe_anime_id": row[2],
+            "moe_animethemeentry_id": row[3],
+            "anime": row[4],
+            "songName": row[5],
+            "slug": row[6],
+            "audio": {"ogg": row[7]},
+            "image": row[8],
+            "artists": row[9],
+            "year": row[10],
+            "synopsis": row[11]
+        }
+      }), 200
+    except Exception as e:
+        return jsonify({"status": "Error fetching daily song info (after retry)", "exception": str(e)}), 500
+  
   except Exception as e:
     print(e)
-    response = {
-      "status": "Error fetching daily song info", 
-      "exception": str(e)
-    }  
-    return jsonify(response), 400
+    return jsonify({"status": "Error fetching daily song info", "exception": str(e)}), 400
 
   finally:
-    pool.putconn(conn)
+    return_conn(pool, conn)
 
 
 @daily_bp.route("/heardle/tracks/daily/full", methods=["GET"])
 def get_daily_full():
-  pool = get_connection_pool()
   game_date = get_pt_today_date()
   # game_date = "2025-08-29"
   # print(f"game date = {game_date}")
-  conn = pool.getconn()
+
+  pool, conn = get_conn_from_pool()
+  if pool is None or conn is None:
+    return jsonify({"status": "DB connection failed"}), 503
+
   try:
     ensure_daily_pick(conn, game_date)
+
     with conn.cursor() as cur:
       query = """
         SELECT d.date_chosen,
@@ -100,8 +147,8 @@ def get_daily_full():
         WHERE d.date_chosen = %s::DATE;        
       """
       cur.execute(query, (game_date,))
-
       row = cur.fetchone()
+
     if not row:
       return jsonify({"status": "No daily track found"}), 404
     
@@ -123,10 +170,10 @@ def get_daily_full():
     }
 
     moe_anime_id = base_data["track"]["moe_anime_id"]
-    moe_animethemeenetry_d = base_data["track"]["moe_animethemeentry_id"]
+    moe_animethemeenetry_id = base_data["track"]["moe_animethemeentry_id"]
 
     # fetch video url from moe_anime_themes_api
-    moe_api_video_url = f"https://api.animethemes.moe/animethemeentry/{moe_animethemeenetry_d}?include=videos&fields[video]=id,link"
+    moe_api_video_url = f"https://api.animethemes.moe/animethemeentry/{moe_animethemeenetry_id}?include=videos&fields[video]=id,link"
     response = requests.get(moe_api_video_url)
     if response.status_code != 200:
       print('Error fetching video url for daily track:', response.status_code)
@@ -157,16 +204,55 @@ def get_daily_full():
     base_data["track"]["season"] = season
     base_data["track"]["studios"] = formatted_studios
 
-
     return jsonify(base_data), 200
+  
+  # one retry on in case of dropped connection
+  except (OperationalError, InterfaceError): 
+    return_conn(pool, conn, close=True)
+    pool, conn = get_conn_from_pool()
+    if pool is None or conn is None:
+      return jsonify({"status": "DB reconnection failed"}), 503
+
+    try:
+      with conn.cursor() as cur:
+        query = """
+          SELECT d.date_chosen,
+                  t.track_id, t.moe_anime_id, t.moe_animethemeentry_id, t.anime, t.song_name, t.slug,
+                  t.audio_ogg_url, t.image_url, t.artists, t.year, t.synopsis
+          FROM heardle_daily d
+          JOIN tracks t on t.track_id = d.track_id
+          WHERE d.date_chosen = %s::DATE;        
+        """
+        cur.execute(query, (game_date,))
+        row = cur.fetchone()
+
+      if not row:
+        return jsonify({"status": "No daily track found"}), 404
+      
+      # for the retry, just return the regular data and dont try to get the video url, season, etc.
+      return jsonify({
+          "date": str(row[0]),
+          "track": {
+              "track_id": row[1],
+              "moe_anime_id": row[2],
+              "moe_animethemeentry_id": row[3],
+              "anime": row[4],
+              "songName": row[5],
+              "slug": row[6],
+              "audio": {"ogg": row[7]},
+              "image": row[8],
+              "artists": row[9],
+              "year": row[10],
+              "synopsis": row[11],
+          },
+      }), 200 
+
+    except Exception as e:
+      return jsonify({"status": "Error fetching daily song info (full, after retry)", "exception": str(e)}), 500 
   
   except Exception as e:
     print(e)
-    response = {
-      "status": "Error fetching daily song info (full)", 
-      "exception": str(e)
-    }  
-    return jsonify(response), 400
+    return jsonify({"status": "Error fetching daily song info (full)", "exception": str(e)}), 400
 
   finally:
-    pool.putconn(conn)
+    return_conn(pool, conn)
