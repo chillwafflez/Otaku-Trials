@@ -2,6 +2,8 @@ import { fetchGameState } from "../utils/GameState.ts";
 import { LoadingSpinner } from "../components/LoadingSpinner.tsx";
 import { DailyTrackTest, GameState } from "../types/types.ts";
 import { useEffect, useState } from "react";
+import { AnimePoster } from "../components/AnimePoster.tsx";
+import { OpeningVideo } from "../components/OpeningVideo.tsx";
 
 
 function MobileLayout({ data, status }: { data: DailyTrackTest, status: string }) {
@@ -16,14 +18,11 @@ function MobileLayout({ data, status }: { data: DailyTrackTest, status: string }
         <span>Type: {data.track.slug}</span>
       </div>
 
-      {/* autoplay the opening */}
-      <video
-        src={data.track.video_url}
-        controls
-        autoPlay={false}
-        loop
-        className="mt-3 mb-5 h-auto mx-auto rounded-lg"
-      ></video>
+      {/* autoplay the opening video if we have the video url, else just play audio */}
+      <OpeningVideo
+        videoUrl={data.track.video_url}
+        audioUrl={data.track.audio.ogg} // make sure your API includes the .ogg here
+      />
 
       {/* title + synopsis */}
       <div className="flex flex-col space-y-1">
@@ -33,10 +32,10 @@ function MobileLayout({ data, status }: { data: DailyTrackTest, status: string }
 
       {/* anime poster + info */}
       <div className="flex flex-col my-5 justify-center items-center">
-        <img
+        <AnimePoster
           src={data.track.image}
           className="w-4/5"
-        ></img>  
+        />
 
         <div className="grid grid-cols-3 gap-4 mt-2 text-center">
           <div>
@@ -81,14 +80,11 @@ function RegularLayout({ data, status }: { data: DailyTrackTest, status:string }
             </div>
           </div>
 
-          {/* autoplay the opening */}
-          <video
-            src={data.track.video_url}
-            controls
-            autoPlay={false}
-            loop
-            className="mt-3 mb-5 h-auto mx-auto rounded"
-          ></video>
+          {/* autoplay the opening video if we have the video url, else just play audio */}
+          <OpeningVideo
+            videoUrl={data.track.video_url}
+            audioUrl={data.track.audio.ogg} // make sure your API includes the .ogg here
+          />
 
           {/* title + synopsis */}
           <div className="flex flex-col space-y-2">
@@ -101,10 +97,10 @@ function RegularLayout({ data, status }: { data: DailyTrackTest, status:string }
         <div>
           {/* anime poster + info */}
           <div className="flex flex-col my-5 justify-center items-center">
-            <img
+            <AnimePoster
               src={data.track.image}
               className="w-full object-cover"
-            ></img>  
+            />
 
             <div className="grid grid-cols-3 gap-4 mt-2 text-center">
               <div>
@@ -135,7 +131,8 @@ function HeardleResult() {
 
   const [dailyTrack, setDailyTrack] = useState<DailyTrackTest | null>(null);
   const [userMessage, setUserMessage] = useState("");
-  const url = "http://127.0.0.1:5000/heardle/"
+  // const url = "http://127.0.0.1:5000/heardle/"
+  const url = "https://chillwafflez.pythonanywhere.com/heardle/"
 
   useEffect(() => {
     // get daily track info
