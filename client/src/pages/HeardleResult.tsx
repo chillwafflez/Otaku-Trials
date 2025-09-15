@@ -131,8 +131,8 @@ function HeardleResult() {
 
   const [dailyTrack, setDailyTrack] = useState<DailyTrackTest | null>(null);
   const [userMessage, setUserMessage] = useState("");
-  // const url = "http://127.0.0.1:5000/heardle/"
-  const url = "https://chillwafflez.pythonanywhere.com/heardle/"
+  const url = "http://127.0.0.1:5000/heardle/"
+  // const url = "https://chillwafflez.pythonanywhere.com/heardle/"
 
   useEffect(() => {
     // get daily track info
