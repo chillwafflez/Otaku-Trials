@@ -33,7 +33,7 @@ def get_daily():
   pool = get_connection_pool()
   game_date = get_pt_today_date()
   # game_date = "2025-08-29"
-  print(f"game date = {game_date}")
+  # print(f"game date = {game_date}")
   conn = pool.getconn()
   try:
     ensure_daily_pick(conn, game_date)
@@ -68,6 +68,15 @@ def get_daily():
           "synopsis": row[11]
       }
     }), 200
+  
+  except Exception as e:
+    print(e)
+    response = {
+      "status": "Error fetching daily song info", 
+      "exception": str(e)
+    }  
+    return jsonify(response), 400
+
   finally:
     pool.putconn(conn)
 
@@ -150,5 +159,14 @@ def get_daily_full():
 
 
     return jsonify(base_data), 200
+  
+  except Exception as e:
+    print(e)
+    response = {
+      "status": "Error fetching daily song info (full)", 
+      "exception": str(e)
+    }  
+    return jsonify(response), 400
+
   finally:
     pool.putconn(conn)
