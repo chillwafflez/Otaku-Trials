@@ -11,7 +11,7 @@ import random
 app = Flask(__name__)
 CORS(
   app,
-  resources={r"/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173"]}},
+  resources={r"/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173", "https://otaku-trials.vercel.app/"]}},
   supports_credentials=True,   # only if you send cookies/auth
 )
 app.register_blueprint(daily_bp)
