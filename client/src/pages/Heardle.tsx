@@ -22,8 +22,8 @@ function Heardle() {
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const url = "http://127.0.0.1:5000/heardle/"
-  // const url = "https://chillwafflez.pythonanywhere.com/heardle/"
+  // const url = "http://127.0.0.1:5000/heardle/"
+  const url = "https://chillwafflez.pythonanywhere.com/heardle/"
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playTimes = [1, 2, 4, 8, 12, 16];
   const stopTimes = [6.25, 12.5, 25, 43.75, 68.75, 100];
