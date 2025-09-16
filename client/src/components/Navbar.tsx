@@ -13,6 +13,8 @@ function NavBar() {
 				return "Home";
 			case "/Heardle":
 				return "Daily Heardle";
+			case "/heardleresult":
+				return "Daily Heardle";
 			default:
 				return "Welcome";
 		}
