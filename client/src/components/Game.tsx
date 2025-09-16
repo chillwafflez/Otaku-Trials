@@ -3,7 +3,7 @@
 function Game(props: {game: string, logo: string, bgColor: string}) {
 
   return (
-    <div className="flex flex-col h-64 border rounded">
+    <div className="flex flex-col h-64 border rounded transform hover:scale-105">
       <div className={`flex-[3] ${props.bgColor} flex items-center justify-center rounded-t`}>
         <img src={props.logo} className="w-20" />
       </div>

@@ -4,6 +4,7 @@ import { DailyTrackTest, GameState } from "../types/types.ts";
 import { useEffect, useState } from "react";
 import { AnimePoster } from "../components/AnimePoster.tsx";
 import { OpeningVideo } from "../components/OpeningVideo.tsx";
+import { useIsLg } from "../hooks/useIsLg.ts";
 
 
 function MobileLayout({ data, status }: { data: DailyTrackTest, status: string }) {
@@ -133,6 +134,7 @@ function HeardleResult() {
   const [userMessage, setUserMessage] = useState("");
   const url = "http://127.0.0.1:5000/heardle/"
   // const url = "https://chillwafflez.pythonanywhere.com/heardle/"
+  const isLargeScreen = useIsLg();
 
   useEffect(() => {
     // get daily track info
@@ -173,13 +175,11 @@ function HeardleResult() {
 
       {dailyTrack ? (
         <>
-          <div className="lg:hidden w-full">
-            <MobileLayout data={dailyTrack} status={userMessage} />
-          </div>
-
-          <div className="hidden lg:block w-full">
+          {isLargeScreen ? (
             <RegularLayout data={dailyTrack} status={userMessage} />
-          </div>
+          ) : (
+            <MobileLayout data={dailyTrack} status={userMessage} />
+          )}
         </>
       ) : (
         <LoadingSpinner />
