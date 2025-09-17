@@ -1,13 +1,212 @@
+import { fetchGameState } from "../utils/GameState.ts";
+import { LoadingSpinner } from "../components/LoadingSpinner.tsx";
+import { DailyTrackTest, GameState } from "../types/types.ts";
+import { useEffect, useState } from "react";
+import { AnimePoster } from "../components/AnimePoster.tsx";
+import { OpeningVideo } from "../components/OpeningVideo.tsx";
+import { useIsLg } from "../hooks/useIsLg.ts";
+import { ShareHeardleButton } from "../components/ShareHeardleButton.tsx";
+
+const formatSuggestion = (track: {"songName": string, "artists": string[], "anime": string}) => {
+  let firstArtist: string = "";
+  if (track["artists"]?.length > 0) {
+    firstArtist = track["artists"][0]
+  }
+  return `${track["songName"].trim()} | ${firstArtist.trim()} (${track["anime"].trim()})`;
+};
+
+
+function MobileLayout({ data, status }: { data: DailyTrackTest, status: string }) {
+
+  const formattedSongName = formatSuggestion(data.track);
+
+  return (
+    <div className="flex flex-col w-4/5 p-5 mx-auto mt-8 bg-[#1C1C1C]">
+      {/* user-specific message + song */}
+      <span className="text-3xl mx-auto">{status}</span>
+      <div className="flex flex-col space-y-[2px] text-xl mt-3">
+        <span>Song: {data.track.songName}</span>
+        <span>Artist(s): {data.track.artists}</span>
+        <span>Type: {data.track.slug}</span>
+      </div>
+
+      {/* autoplay the opening video if we have the video url, else just play audio */}
+      <OpeningVideo
+        videoUrl={data.track.video_url}
+        audioUrl={data.track.audio.ogg} // make sure your API includes the .ogg here
+      />
+
+      {/* title + synopsis */}
+      <div className="flex flex-col space-y-1">
+        <span className="text-2xl">{data.track.anime}</span>
+        <span>{data.track.synopsis}</span>
+      </div>
+
+      {/* anime poster + info */}
+      <div className="flex flex-col my-5 justify-center items-center">
+        <AnimePoster
+          src={data.track.image}
+          className="w-4/5"
+        />
+
+        <div className="grid grid-cols-3 gap-4 mt-2 text-center">
+          <div>
+            <div className="font-semibold">Released</div>
+            <div>{data.track.year}</div>
+          </div>
+          <div>
+            <div className="font-semibold">Season</div>
+            <div>{data.track.season}</div>
+          </div>
+          <div>
+            <div className="font-semibold">Studio(s)</div>
+            <div>{data.track.studios?.join(", ")}</div>
+          </div>
+        </div>
+
+        <div className="w-1/2 mt-5 justify-centertext-center">
+          <ShareHeardleButton songname={formattedSongName} />
+        </div>
+      </div>
+    </div>
+  )
+};
+
+function RegularLayout({ data, status }: { data: DailyTrackTest, status:string }) {
+
+  const formattedSongName = formatSuggestion(data.track);
+
+  return (
+    <div className="flex flex-col w-1/2 p-5 mx-auto mt-8 bg-[#1C1C1C]">
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
+
+        {/* left side (user-specific message + song details) */}
+        <div>
+          <span className="text-4xl mx-auto">{status}</span>
+          <div className="flex flex-col space-y-[2px] text-xl mt-3">
+            <div className="flex gap-2">
+              <span className="opacity-90">Song:</span>
+              <span className="font-medium">{data.track.songName}</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="opacity-90">Artist(s):</span>
+              <span className="font-medium">{data.track.artists}</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="opacity-90">Type:</span>
+              <span className="font-medium">{data.track.slug}</span>
+            </div>
+          </div>
+
+          {/* autoplay the opening video if we have the video url, else just play audio */}
+          <OpeningVideo
+            videoUrl={data.track.video_url}
+            audioUrl={data.track.audio.ogg} // make sure your API includes the .ogg here
+          />
+
+          {/* title + synopsis */}
+          <div className="flex flex-col space-y-2">
+            <span className="text-2xl">{data.track.anime}</span>
+            <span className="text-sm">{data.track.synopsis}</span>
+          </div>
+        </div>
+
+        {/* right side */}
+        <div>
+          {/* anime poster + info */}
+          <div className="flex flex-col my-5 justify-center items-center">
+            <AnimePoster
+              src={data.track.image}
+              className="w-full object-cover"
+            />
+
+            <div className="grid grid-cols-3 gap-4 mt-2 text-center">
+              <div>
+                <div className="font-semibold">Released</div>
+                <div>{data.track.year}</div>
+              </div>
+              <div>
+                <div className="font-semibold">Season</div>
+                <div>{data.track.season}</div>
+              </div>
+              <div>
+                <div className="font-semibold">Studio(s)</div>
+                <div>{data.track.studios?.join(", ")}</div>
+              </div>
+            </div>
+
+            <div className="w-1/2 mt-32 justify-centertext-center">
+              <ShareHeardleButton songname={formattedSongName} />
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  )
+}
+
+
 
 
 function HeardleResult() {
 
+  const [dailyTrack, setDailyTrack] = useState<DailyTrackTest | null>(null);
+  const [userMessage, setUserMessage] = useState("");
+  // const url = "http://127.0.0.1:5000/heardle/"
+  const url = "https://chillwafflez.pythonanywhere.com/heardle/"
+  const isLargeScreen = useIsLg();
 
-    return (
-        <div className="flex flex-col justify-center items-center">
-            yippee
-        </div>
-    )
+  useEffect(() => {
+    // get daily track info
+    const fetchDailyTrack = async () => {
+      try {
+        const res = await fetch(url + "tracks/daily/full");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data: DailyTrackTest = await res.json();
+        setDailyTrack(data);
+        // console.log(dailyTrack);
+      } catch (error) {
+        console.error("Failed to fetch daily track info:", error);
+      }
+    }
+    fetchDailyTrack();    
+  }, [])
+
+  // process when daily track arrives
+  useEffect(() => {
+    if (!dailyTrack) return;
+
+    const savedState: GameState | null = fetchGameState();
+    // get game state (user succeeded or failed)
+    if (!savedState) {
+      return;
+    }
+
+    if (savedState.status == "SUCCESS") {
+      setUserMessage("Yippee you guessed the song!");
+    } else {
+      setUserMessage("Better luck next time!");
+    }
+    }, [dailyTrack]);
+
+
+  return (
+    <div className="flex flex-col justify-center items-center text-white">
+
+      {dailyTrack ? (
+        <>
+          {isLargeScreen ? (
+            <RegularLayout data={dailyTrack} status={userMessage} />
+          ) : (
+            <MobileLayout data={dailyTrack} status={userMessage} />
+          )}
+        </>
+      ) : (
+        <LoadingSpinner />
+      )}
+    </div>
+  )
 }
 
 

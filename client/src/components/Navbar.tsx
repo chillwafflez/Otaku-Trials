@@ -1,39 +1,49 @@
-import { Link } from "react-router-dom";
+import { useLocation  } from "react-router-dom";
 import { GoGear } from "react-icons/go";
 import { BsBarChart } from "react-icons/bs";
 import { IoPersonOutline } from "react-icons/io5";
 
 
 function NavBar() {
+	const location = useLocation();
+	 
+	const setNavBarText = () => {
+		switch (location.pathname) {
+			case "/":
+				return "Home";
+			case "/heardle":
+				return "Daily Heardle";
+			case "/heardleresult":
+				return "Daily Heardle";
+			default:
+				return "Welcome";
+		}
+	};
 
   return (
     <>
 			<nav className="bg-navbar text-white border-b border-white">
 				<div className="flex justify-evenly items-center py-6 px-3  lg:px-6">
 
-					<a href="/" className="flex-1 invisible lg:visible text-lg lg:text-2xl bg-clip-text text-transparent bg-gradient-to-r text-white">
-						OtakuTrials
-					</a>						
+					<div className="flex-1">
+						<a href="/" className="invisible lg:visible text-lg lg:text-2xl bg-clip-text text-transparent bg-gradient-to-r text-white">
+							OtakuTrials
+						</a>	
+					</div>					
 
 					<div className="flex-grow text-2xl lg:text-3xl text-center">
-							Daily Heardle
+						{setNavBarText()}
 					</div>
 
 					<ul className="flex flex-1 space-x-1 justify-end">
 						<li>
-							<Link to="/Account">
-								<IoPersonOutline className="w-6 h-6 lg:w-8 lg:h-7 hover:bg-gray-600"/>
-							</Link>
+							<IoPersonOutline className="w-6 h-6 lg:w-8 lg:h-7 hover:text-gray-400 cursor-pointer"/>
 						</li>
 						<li>
-							<Link to="/Leaderboard">
-								<BsBarChart className="w-6 h-6 lg:w-8 lg:h-7 hover:bg-gray-600"/>
-							</Link>
+							<BsBarChart className="w-6 h-6 lg:w-8 lg:h-7 hover:text-gray-400 cursor-pointer"/>
 						</li>
 						<li>
-							<Link to="/Settings">
-								<GoGear className="w-6 h-6 lg:w-8 lg:h-7 hover:bg-gray-600" />
-							</Link>
+							<GoGear className="w-6 h-6 lg:w-8 lg:h-7 hover:text-gray-400 cursor-pointer"/>
 						</li>
 					</ul>
 				</div>

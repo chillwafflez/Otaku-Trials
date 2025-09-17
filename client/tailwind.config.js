@@ -4,8 +4,9 @@ export default {
   theme: {
     extend: {
       colors: {
-        // customBackground: "#242424",
-        customBackground: "#1C1919",
+        aboutHeardleBG: "#221E1E",
+        // lighterBG: "#1C1919",
+        customBackground: "#131313",
         // bar1: "#F955A0",
         // bar2: "#F782B4",
         // bar3: "#F9A6C5",

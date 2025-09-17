@@ -1,38 +1,250 @@
 from flask import Flask, Response, request, jsonify
-from db import get_connection_pool
+from flask_cors import CORS
+import csv
+import requests
+from db import get_connection_pool, get_conn_from_pool, return_conn
+from routes.daily import daily_bp
+import time
+import random
+from psycopg2 import OperationalError, InterfaceError
 
 
 app = Flask(__name__)
+CORS(
+  app,
+  resources={r"/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173", "https://otaku-trials.vercel.app/"]}},
+  supports_credentials=True,   # only if you send cookies/auth
+)
+app.register_blueprint(daily_bp)
+
 
 @app.route("/", methods=['GET'])
 def home():
     return Response("test otaku-trial api home", 200)
 
-@app.route("/heardle/tracks", methods=['GET'])
-def get_tracks():
-  try:
-    pool = get_connection_pool()
-    with pool.getconn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT track_id, anime, song_name FROM tracks;")
-            rows = cur.fetchall()
-            return jsonify(rows), 200
-      
-    response = {
-        "status": "Unable to fetch Heardle tracks", 
-        "exception": e
-    }  
-    return jsonify(response), 404
-  except Exception as e:
-    response = {
-        "status": "Unable to fetch Heardle tracks", 
-        "exception": e
-    }  
-    return jsonify(response), 404
-  
-  finally:
-    pool.putconn(conn)  
 
+@app.route("/heardle/refresh", methods=['POST'])
+def refresh_tracks():
+  max_number_tracks = request.get_json()["max_number_tracks"]
+  results = []
+  # url = """https://api.animethemes.moe/anime
+  #   ?page[size]=100
+  #   &sort=random
+  #   &include=images,animethemes.animethemeentries.videos.audio,animethemes.song.artists
+  #   &filter[has]=animethemes
+  #   &filter[animetheme][type]=OP
+  #   &fields[anime]=id,name,year,synopsis
+  #   &fields[animetheme]=id,slug
+  #   &fields[animethemeentry]=id
+  #   &fields[video]=id
+  #   &fields[audio]=link
+  #   &fields[artist]=name
+  #   &fields[image]=link
+  # """
+  url = """https://api.animethemes.moe/anime?page[size]=100&sort=random&include=images,animethemes.animethemeentries.videos.audio,animethemes.song.artists&filter[has]=animethemes&filter[animetheme][type]=OP&fields[anime]=id,name,year,synopsis&fields[animetheme]=id,slug&fields[animethemeentry]=id&fields[video]=id,link&fields[audio]=link&fields[artist]=name&fields[image]=link"""
+
+  missing_data_tracker = {
+    "no_animethemes": 0,
+    "no_animethemeentries": 0,
+    "duplicate_entry": 0,
+    "no_videos": 0,
+    "no_audio": 0,
+    "images": 0,
+    "missing_required_ids": 0
+  }
+
+  seen_entries = set()
+  pool = None
+  conn = None
+  try:
+    while url and len(results) < max_number_tracks:     
+      random_pause = random.randint(3, 8)
+      print(f"pausing for {random_pause} seconds")
+      time.sleep(random_pause)
+      response = requests.get(url)
+
+      if response.status_code != 200:
+        print('Error:', response.status_code)
+        return jsonify({"status": "API error", "code": response.status_code}), 502
+
+      response_json = response.json()
+      animes = response_json["anime"]
+
+      for anime in animes:
+        moe_anime_id = anime["id"]
+        anime_name = anime["name"].strip() if anime["name"] else ""
+        year = anime["year"] if anime["year"] else None
+        synopsis = anime["synopsis"].replace('\n', '').replace("\r", "").strip() if anime["synopsis"] else ""
+        if (anime_name == ""):
+          print("SKIP: resource has no anime name")
+          continue
+
+        # extract image
+        images = anime.get("images") or []
+        image_url = None
+        if len(images) > 1 and images[1].get("link"):
+          image_url = images[1]["link"]
+        elif len(images) >= 1 and images[0].get("link"):
+          image_url = images[0].get("link")
+        else:
+          image_url = None
+          missing_data_tracker["images_missing"] += 1
+
+        # extract OPs
+        animethemes = anime.get("animethemes") or []
+        if not animethemes:
+          print("SKIP: resource has no anime themes")
+          missing_data_tracker["no_animethemes"] += 1
+          continue
+
+        for theme in animethemes:
+          moe_animetheme_id = theme["id"]
+          slug = theme["slug"]
+          song = theme["song"]
+          if not song:
+            print("SKIP: theme resource has no song info")
+            continue
+
+          moe_song_id = song["id"]
+          songname = song["title"]
+          if not songname:
+            songname = f"{anime_name} {slug}"
+          
+          # extract artists
+          artists = []
+          song_artists = song.get("artists") or []
+          for artist in song_artists:
+            artists.append(artist["name"].strip())
+
+          animethemeentries = theme.get("animethemeentries") or []
+          if not animethemeentries:
+            print("SKIP: resource has no anime theme entries")
+            missing_data_tracker["no_animethemeentries"] += 1
+            continue
+
+          theme_entry = animethemeentries[0] # even if there are multiple version of the OP, just get the first one
+          moe_entry_id = theme_entry["id"]
+          # skip if we've already seen this entry (specific opening)
+          if moe_entry_id in seen_entries:
+            print("SKIP: already have this theme entry (opening)")
+            missing_data_tracker["duplicate_entry"] += 1
+            continue
+          seen_entries.add(moe_entry_id)
+
+          # extract ogg url
+          videos = theme_entry.get("videos") or []
+          if not videos:
+            print("SKIP: resource's anime entry has no videos")
+            missing_data_tracker["no_videos"] += 1
+            continue
+
+          audio_ogg_url = None
+          first_video = videos[0] or {}
+          audio = first_video.get("audio") or {}
+          audio_ogg_url = audio.get("link")
+          if not audio_ogg_url:
+            print("SKIP: resource's video has no audio link")
+            missing_data_tracker["no_audio"] += 1
+            continue
+          audio_ogg_url = videos[0]["audio"]["link"]
+
+          # must have all required IDs
+          if not (moe_anime_id and moe_animetheme_id and moe_entry_id and moe_song_id):
+            print("SKIP: resource missing an ID")
+            missing_data_tracker["missing_required_ids"] += 1
+            continue
+
+          results.append({'moe_anime_id': moe_anime_id,
+                          'moe_animetheme_id': moe_animetheme_id,
+                          'moe_animethemeentry_id': moe_entry_id,
+                          'moe_song_id': moe_song_id,
+                          'anime': anime_name,
+                          'year': year, 
+                          'song_name': songname,
+                          'slug': slug, 
+                          'audio_ogg_url': audio_ogg_url, 
+                          'image_url': image_url, 
+                          'artists': artists, 
+                          'synopsis': synopsis})
+          
+      url = response_json["links"]["next"]
+      print(f"moving to next page...")
+
+    print("Missing Values Log")
+    print(missing_data_tracker)
+
+    pool = get_connection_pool()
+    query = """
+      INSERT INTO tracks (moe_anime_id, moe_animetheme_id, moe_animethemeentry_id, moe_song_id, anime, year, song_name, slug, audio_ogg_url, image_url, artists, synopsis)
+      VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+      """
+    conn = pool.getconn()
+    with conn.cursor() as cur:
+      cur.execute('TRUNCATE tracks, heardle_daily')  # truncate table only after we have a new batch of tracks ready to be added
+
+      for result in results:
+        cur.execute(query, (result['moe_anime_id'], result['moe_animetheme_id'], result['moe_animethemeentry_id'], result['moe_song_id'], result['anime'], result['year'], result['song_name'], result['slug'], result['audio_ogg_url'], result['image_url'], result['artists'], result['synopsis']))
+    conn.commit()
+
+    # with open("temp_data\\test.csv", mode='a', newline='', encoding="utf-8") as f:
+    #   writer = csv.writer(f, quoting=csv.QUOTE_MINIMAL)
+    #   writer.writerow(['moe_anime_id', 'moe_animetheme_id', 'moe_animethemeentry_id', 'moe_song_id', 'anime', 'year', 'song_name', 'slug', 'audio_ogg_url', 'image_url', 'artists', 'synopsis'])
+    #   for result in results:
+    #     writer.writerow([result['moe_anime_id'], result['moe_animetheme_id'], result['moe_animethemeentry_id'], result['moe_song_id'], result['anime'], result['year'], result['song_name'], result['slug'], result['audio_ogg_url'], result['image_url'], result['artists'], result['synopsis']])
+          
+    return jsonify(results), 201
+
+  except Exception as e:
+    print(e)
+    response = {
+      "status": "Error adding refreshing track list in database", 
+      "exception": str(e)
+    }  
+    return jsonify(response), 400
+
+  finally:
+    if pool and conn:
+      pool.putconn(conn)
+       
+
+@app.route("/heardle/tracks", methods=['GET'])
+def fetch_tracks():
+  pool, conn = get_conn_from_pool()
+  if pool is None or conn is None:
+    return jsonify({
+      "status": "DB conection failed"
+    }), 503
+
+  try:
+    with conn.cursor() as cur:
+      cur.execute("SELECT track_id, anime, song_name, artists FROM tracks;")
+      rows = cur.fetchall()
+      return jsonify(rows), 200
+    
+  # retry once with a fresh connection in case the server closed SSL
+  except (OperationalError, InterfaceError):
+    return_conn(pool, conn, close=True)
+    pool, conn = get_conn_from_pool()
+    if pool is None or conn is None:
+      return jsonify({
+        "status": "DB conection failed"
+      }), 503
+    
+    try:
+      with conn.cursor() as cur:
+        cur.execute("SELECT track_id, anime, song_name, artists FROM tracks;")
+        rows.cur.fetchall()
+        return jsonify(rows), 200
+    except Exception as e:
+      return jsonify({"status": "Unable to fetch Heardle tracks (retry)",
+                      "exception": str(e)}), 500
+
+  except Exception as e:
+    return jsonify({"status": "Unable to fetch Heardle tracks",
+                    "exception": str(e)}), 500
+
+  finally:
+    return_conn(pool, conn)
 
 
 if __name__ == '__main__':
