@@ -3,6 +3,7 @@ import { Home } from './pages/Home';
 import { Heardle } from './pages/Heardle';
 import { HeardleResult } from './pages/HeardleResult';
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import ProtectedResultRoute from './pages/ProtectedResultRoute';
 
 function App() {
   return (
@@ -13,7 +14,9 @@ function App() {
           <Routes>
             <Route path="/" element={<Home/>} />
             <Route path="/heardle" element={<Heardle/>} />
-            <Route path="/heardleresult" element={<HeardleResult/>} />
+            <Route element={<ProtectedResultRoute />}>
+              <Route path="/heardleresult" element={<HeardleResult />} />
+            </Route>
           </Routes>
         </div>
       </Router>
