@@ -5,9 +5,20 @@ import { useEffect, useState } from "react";
 import { AnimePoster } from "../components/AnimePoster.tsx";
 import { OpeningVideo } from "../components/OpeningVideo.tsx";
 import { useIsLg } from "../hooks/useIsLg.ts";
+import { ShareHeardleButton } from "../components/ShareHeardleButton.tsx";
+
+const formatSuggestion = (track: {"songName": string, "artists": string[], "anime": string}) => {
+  let firstArtist: string = "";
+  if (track["artists"]?.length > 0) {
+    firstArtist = track["artists"][0]
+  }
+  return `${track["songName"].trim()} | ${firstArtist.trim()} (${track["anime"].trim()})`;
+};
 
 
 function MobileLayout({ data, status }: { data: DailyTrackTest, status: string }) {
+
+  const formattedSongName = formatSuggestion(data.track);
 
   return (
     <div className="flex flex-col w-4/5 p-5 mx-auto mt-8 bg-[#1C1C1C]">
@@ -52,12 +63,18 @@ function MobileLayout({ data, status }: { data: DailyTrackTest, status: string }
             <div>{data.track.studios?.join(", ")}</div>
           </div>
         </div>
+
+        <div className="w-1/2 mt-5 justify-centertext-center">
+          <ShareHeardleButton songname={formattedSongName} />
+        </div>
       </div>
     </div>
   )
 };
 
 function RegularLayout({ data, status }: { data: DailyTrackTest, status:string }) {
+
+  const formattedSongName = formatSuggestion(data.track);
 
   return (
     <div className="flex flex-col w-1/2 p-5 mx-auto mt-8 bg-[#1C1C1C]">
@@ -116,6 +133,10 @@ function RegularLayout({ data, status }: { data: DailyTrackTest, status:string }
                 <div className="font-semibold">Studio(s)</div>
                 <div>{data.track.studios?.join(", ")}</div>
               </div>
+            </div>
+
+            <div className="w-1/2 mt-32 justify-centertext-center">
+              <ShareHeardleButton songname={formattedSongName} />
             </div>
           </div>
         </div>
