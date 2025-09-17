@@ -2,16 +2,6 @@ import { GameState } from "../types/types.ts";
 
 
 export function formatText(state: GameState, songname: string): string {
-  console.log("SONGNAME = " + songname);
-  state.guesses.forEach(g => {
-    console.log("guess " + g)
-    if (g === songname) {
-      console.log("YIPEPEEE")
-    } else {
-      console.log("bruh");
-    }
-  })
-  
   const gameName: string = "Otaku Trials Heardle";
   const gameDate = new Date(state.timestamp);
   const formattedGameDate = gameDate.toLocaleDateString("en-US", {
@@ -26,7 +16,7 @@ export function formatText(state: GameState, songname: string): string {
     message = "I suck at Anime Heardle!";
     score = "X/6";
   } else {
-    score = `${state.currGuessIndex + 1}/6`;
+    score = `${state.currGuessIndex}/6`;
     message = "I solved today's Anime Heardle!"
   }
 

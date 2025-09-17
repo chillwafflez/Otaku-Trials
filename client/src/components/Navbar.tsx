@@ -11,7 +11,7 @@ function NavBar() {
 		switch (location.pathname) {
 			case "/":
 				return "Home";
-			case "/Heardle":
+			case "/heardle":
 				return "Daily Heardle";
 			case "/heardleresult":
 				return "Daily Heardle";

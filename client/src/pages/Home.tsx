@@ -16,7 +16,7 @@ function Home() {
   return (
     <div className="flex flex-col justify-center items-center mx-4 mt-14 mb-10 lg:mt-20">
       <div className="w-full lg:max-w-[720px] grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-8 lg:gap-x-6 lg:gap-y-10">
-        <Link to="/Heardle"> 
+        <Link to="/heardle"> 
           <Game game="Heardle" logo={headsetIcon} bgColor="bg-pink-300"/>
         </Link> 
         <div onClick={wipAlert} className="cursor-pointer"><Game game="OP/ED Versus" logo={versusIcon} bgColor="bg-[#DC7FFE]"/></div>
