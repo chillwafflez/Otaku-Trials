@@ -4,6 +4,7 @@ import { Heardle } from './pages/Heardle';
 import { HeardleResult } from './pages/HeardleResult';
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import ProtectedResultRoute from './hooks/ProtectedResultRoute';
+import ProtectedHeardleRoute from './hooks/ProtectedHeardleRoute';
 
 function App() {
   return (
@@ -13,7 +14,9 @@ function App() {
           <NavBar/>
           <Routes>
             <Route path="/" element={<Home/>} />
-            <Route path="/heardle" element={<Heardle/>} />
+            <Route element={<ProtectedHeardleRoute />}>
+              <Route path="/heardle" element={<Heardle/>} />
+            </Route>
             <Route element={<ProtectedResultRoute />}>
               <Route path="/heardleresult" element={<HeardleResult />} />
             </Route>
