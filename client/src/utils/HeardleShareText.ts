@@ -22,7 +22,7 @@ export function formatText(state: GameState, songname: string): string {
 
   const formattedGuesses: string = state.guesses.map(g => g === "SKIPPED" ? "⏭️" : g === songname ? "✅" : "❌").join(" ")
   const header = `${gameName} (${score}) — ${formattedGameDate}`;
-  const footer = "https://otaku-trials.vercel.app/Heardle";
+  const footer = "https://otaku-trials.vercel.app/heardle";
 
   return `${header}\n\n${message}\n${formattedGuesses}\n${footer}`;
 }
