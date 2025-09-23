@@ -1,0 +1,123 @@
+# run in a PythonAnywhere task to ensure a anidle anime was picked
+
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from psycopg2 import InterfaceError, OperationalError
+from db import get_conn_from_pool, return_conn
+import requests
+import sys
+
+url = 'https://graphql.anilist.co'
+
+def get_pt_today_date():
+  return datetime.now(ZoneInfo("America/Los_Angeles")).date()
+
+# base function to choose a anidle anime
+# returns number of rows inserted (0 or 1)
+def pick_daily_anidle(conn, game_date) -> int:
+  with conn:
+    with conn.cursor() as cur:
+      cur.execute(
+        """
+        INSERT INTO anidle_daily (date_chosen, anilist_id)
+        SELECT %s::DATE AS game_date, a.anilist_id
+        FROM animes a
+        WHERE NOT EXISTS (
+          SELECT 1 FROM anidle_daily d
+          WHERE d.anilist_id = a.anilist_id
+            AND d.date_chosen >= (%s::DATE - INTERVAL '30 days')
+        )
+        ORDER BY random()
+        LIMIT 1
+        ON CONFLICT (date_chosen) DO NOTHING;
+        """,
+        (game_date, game_date),
+      )
+      return cur.rowcount  # 1 if inserted 0 if already present
+
+def fetch_full_anidle_info(conn, game_date):
+  with conn.cursor() as cur:
+    cur.execute(
+      """
+      SELECT anilist_id
+      FROM anidle_daily
+      WHERE date_chosen = %s::DATE
+      """,
+      (game_date,),
+    )
+    row = cur.fetchone()
+  if not row:
+     return False, "no daily anidle row to add data to"
+  
+  anilist_id = row[0]
+  print(f"anilist id = {anilist_id}")
+
+  # fetch additional info
+  query = '''
+    query getAdditionalInfo($id: Int) {
+      Media(id: $id, type: ANIME) {
+        coverImage {
+          large
+        }
+        description
+        averageScore
+        trailer {
+          id
+        }
+      }
+    }
+    '''
+  variables = {
+      "id": anilist_id
+  }
+  response = requests.post(url, json={'query': query, 'variables': variables})
+  json = response.json()
+
+  media = json['data']['Media']
+  cover_image = media['coverImage']['large']
+  description = media['description']
+  average_score = media['averageScore']
+  trailer_id = media['trailer']['id']
+
+  with conn:
+    with conn.cursor() as cur:
+      cur.execute(
+        """
+        UPDATE anidle_daily
+          SET image_url = %s,
+            summary = %s,
+            score = %s,
+            trailer_url = %s
+        WHERE date_chosen = %s::DATE
+        """,
+        (cover_image, description, average_score, trailer_id, game_date),
+      )
+    
+  return True, 'ok'
+
+
+def main():
+  game_date = get_pt_today_date()
+  pool, conn = get_conn_from_pool()
+  if pool is None or conn is None:
+    print("daily_job: DB connection failed")
+    return 2
+
+  try:
+    inserted = pick_daily_anidle(conn, game_date)
+    if inserted:
+      print(f"daily_anidle_job: picked new anidle for {game_date}")
+    else:
+      print(f"daily_anidle_job: tried picking new anidle but anidle already picked for {game_date}")
+    ok, msg = fetch_full_anidle_info(conn, game_date)
+    print(f"daily_anidle_job: tried getting full daily song info = {msg}")
+    return 0
+  finally:
+    return_conn(pool, conn)
+
+if __name__ == "__main__":
+  try:
+    sys.exit(main())
+  except (OperationalError, InterfaceError) as e:
+    print(f"daily_job: connection error: {e}")
+    sys.exit(3)
