@@ -7,17 +7,6 @@ body {
   @apply bg-customBackground;
 }
 
-h2 {
-  @apply text-yellow-500;
-}
-
-th {
-  @apply text-yellow-500;
-}
-
-td {
-  @apply text-gray-50;
-}
 
 .wave {
   animation-delay: calc(1s - var(--i));

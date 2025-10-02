@@ -22,7 +22,9 @@ function Home() {
         <div onClick={wipAlert} className="cursor-pointer"><Game game="OP/ED Versus" logo={versusIcon} bgColor="bg-[#DC7FFE]"/></div>
         <div onClick={wipAlert} className="cursor-pointer"><Game game="Character" logo={characterIcon} bgColor="bg-blue-400"/></div>
         <div onClick={wipAlert} className="cursor-pointer"><Game game="Screenshot" logo={screenshotIcon} bgColor="bg-white"/></div>
-        <div onClick={wipAlert} className="cursor-pointer"><Game game="Animedle" logo={animedleIcon} bgColor="bg-[#FF6F6F]"/></div>
+        <Link to="/anidle">
+          <Game game="Animedle" logo={animedleIcon} bgColor="bg-[#FF6F6F]"/>
+        </Link> 
         <div onClick={wipAlert} className="cursor-pointer"><Game game="Gacha" logo={gachaIcon} bgColor="bg-green-400"/></div>
       </div>
     </div>
