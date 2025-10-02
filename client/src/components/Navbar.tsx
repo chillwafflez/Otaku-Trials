@@ -15,6 +15,8 @@ function NavBar() {
 				return "Daily Heardle";
 			case "/heardleresult":
 				return "Daily Heardle";
+			case "/anidle":
+				return "Anidle";
 			default:
 				return "Welcome";
 		}

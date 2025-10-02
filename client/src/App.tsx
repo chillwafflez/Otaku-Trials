@@ -2,6 +2,7 @@ import { NavBar } from './components/Navbar';
 import { Home } from './pages/Home';
 import { Heardle } from './pages/Heardle';
 import { HeardleResult } from './pages/HeardleResult';
+import { Anidle } from './pages/Anidle';
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import ProtectedResultRoute from './hooks/ProtectedResultRoute';
 import ProtectedHeardleRoute from './hooks/ProtectedHeardleRoute';
@@ -20,6 +21,7 @@ function App() {
             <Route element={<ProtectedResultRoute />}>
               <Route path="/heardleresult" element={<HeardleResult />} />
             </Route>
+            <Route path="/anidle" element={<Anidle/>}/>
           </Routes>
         </div>
       </Router>
