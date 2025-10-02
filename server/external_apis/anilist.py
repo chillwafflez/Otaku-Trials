@@ -17,6 +17,10 @@ def getMostPopularAnimeQuery(page_number: int):
         episodes
         genres
         source
+        coverImage {
+          large
+          extraLarge
+        }
         studios {
           nodes {
             name
@@ -26,6 +30,7 @@ def getMostPopularAnimeQuery(page_number: int):
           id
           name
         }
+        status
       }
     }
   }
@@ -136,6 +141,11 @@ def getMostPopularAnime(max: int):
       num_of_episodes = media['episodes']
       genres = media.get('genres') or []
       source = media['source']
+      cover_image_obj = media['coverImage']
+      cover_image = cover_image_obj.get('extraLarge') or {}
+      if not cover_image:
+        cover_image = cover_image_obj.get('large')
+      status = media['status']
 
       # get first 2 studios
       formatted_studios = []
@@ -171,7 +181,9 @@ def getMostPopularAnime(max: int):
                     'season': season,
                     'num_of_episodes': num_of_episodes, 
                     'genres': genres,
-                    'source': source, 
+                    'source': source,
+                    'cover_image': cover_image,
+                    'status': status, 
                     'studios': formatted_studios, 
                     'tags': formatted_tags})
     page += 1
@@ -184,16 +196,20 @@ def getMostPopularAnime(max: int):
   return animes
 
 def main():
-  animes_fetched = getMostPopularAnime(max=500)
-  for anime in animes_fetched:
-    print(anime)
-    print()
+  animes_fetched = getMostPopularAnime(max=600)
 
-  with open("server\\temp_data\\animev2.csv", mode='a', newline='', encoding="utf-8") as f:
+  counter = 1
+  difficulty = 'EASY'
+  with open("server\\temp_data\\animev3.csv", mode='a', newline='', encoding="utf-8") as f:
     writer = csv.writer(f, quoting=csv.QUOTE_MINIMAL)
-    writer.writerow(['anilist_id', 'english_title', 'native_title', 'user_preferred_title', 'season_year', 'season', 'num_of_episodes', 'genres', 'source', 'studios', 'tags'])
+    writer.writerow(['anilist_id', 'english_title', 'native_title', 'user_preferred_title', 'season_year', 'season', 'num_of_episodes', 'genres', 'source', 'cover_image', 'status', 'studios', 'tags', 'difficulty'])
     for result in animes_fetched:
-      writer.writerow([result['anilist_id'], result['english_title'], result['native_title'], result['user_preferred_title'], result['season_year'], result['season'], result['num_of_episodes'], result['genres'], result['source'], result['studios'], result['tags']])
+      writer.writerow([result['anilist_id'], result['english_title'], result['native_title'], result['user_preferred_title'], result['season_year'], result['season'], result['num_of_episodes'], result['genres'], result['source'], result['cover_image'], result['status'], result['studios'], result['tags'], difficulty])
+      counter += 1
+      if counter > 200:
+        difficulty = 'MEDIUM'
+      if counter > 400:
+        difficulty = 'HARD'
     
 
 if __name__ == "__main__":

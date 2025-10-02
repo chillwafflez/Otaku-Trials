@@ -1,7 +1,7 @@
 import csv
 import ast
 import pandas as pd
-from db import get_conn_from_pool, return_conn
+from server.db import get_conn_from_pool, return_conn
 from psycopg2.extras import execute_values
 
 def validate():
@@ -38,7 +38,7 @@ def parse_list_field(s):
 # move data from csv into postgres
 def migrate():
   rows = []
-  with open("temp_data\\animev2.csv", newline='', encoding="utf-8") as f:
+  with open("server\\temp_data\\animev3.csv", newline='', encoding="utf-8") as f:
     reader = csv.DictReader(f)
     for row in reader:
       rows.append((
@@ -52,7 +52,10 @@ def migrate():
           parse_list_field(row["genres"]),
           parse_list_field(row["tags"]),
           parse_list_field(row["studios"]),
-          row["source"] or None
+          row["source"] or None,
+          row["cover_image"] or None,
+          row["status"],
+          row["difficulty"]
       ))
 
   pool, conn = get_conn_from_pool()
@@ -64,7 +67,7 @@ def migrate():
     query = """
       INSERT INTO animes(
         anilist_id, english_title, native_title, user_preferred_title, season_year, 
-        season, num_of_episodes, genres, tags, studios, source)
+        season, num_of_episodes, genres, tags, studios, source, cover_image, status, difficulty)
       VALUES %s
       ON CONFLICT (anilist_id) DO UPDATE SET
         english_title = EXCLUDED.english_title,
@@ -76,7 +79,10 @@ def migrate():
         genres = EXCLUDED.genres,
         tags = EXCLUDED.tags,
         studios = EXCLUDED.studios,
-        source = EXCLUDED.source;
+        source = EXCLUDED.source,
+        status = EXCLUDED.status,
+        cover_image = EXCLUDED.cover_image,
+        difficulty = EXCLUDED.difficulty;
       """
     execute_values(cur, query, rows)
   conn.commit()
