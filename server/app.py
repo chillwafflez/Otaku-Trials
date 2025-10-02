@@ -4,6 +4,7 @@ import csv
 import requests
 from db import get_connection_pool, get_conn_from_pool, return_conn
 from routes.daily import daily_bp
+from routes.anidle import anidle_bp
 import time
 import random
 from psycopg2 import OperationalError, InterfaceError
@@ -16,31 +17,116 @@ CORS(
   supports_credentials=True,   # only if you send cookies/auth
 )
 app.register_blueprint(daily_bp)
-
+app.register_blueprint(anidle_bp)
 
 @app.route("/", methods=['GET'])
 def home():
     return Response("test otaku-trial api home", 200)
 
 
+@app.route("/anime", methods=['GET'])
+def fetch_animes():
+  pool, conn = get_conn_from_pool()
+  if pool is None or conn is None:
+    return jsonify({
+      "status": "DB conection failed"
+    }), 503
+
+  try:
+    with conn.cursor() as cur:
+      cur.execute("SELECT anilist_id, english_title, native_title, user_preferred_title, season_year, season, num_of_episodes, genres, tags, studios, source, cover_image FROM animes;")
+      rows = cur.fetchall()
+      animes = []
+      for row in rows:
+        animes.append({
+        "anilist_id": row[0],
+        "english_title": row[1],
+        "native_title": row[2],
+        "user_preferred_title": row[3],
+        "season_year": row[4],
+        "season": row[5],
+        "num_of_episodes": row[6],
+        "genres": row[7],
+        "tags": row[8],
+        "studios": row[9],
+        "source": row[10],
+        "cover_image": row[11]
+      })
+      return jsonify(animes), 200
+    
+  # retry once with a fresh connection in case the server closed SSL
+  except (OperationalError, InterfaceError):
+    return_conn(pool, conn, close=True)
+    pool, conn = get_conn_from_pool()
+    if pool is None or conn is None:
+      return jsonify({
+        "status": "DB conection failed"
+      }), 503
+    
+    try:
+      with conn.cursor() as cur:
+        cur.execute("SELECT anilist_id, english_title, native_title, user_preferred_title season_year, season, num_of_episodes, genres, tags, studios, source, cover_image FROM animes;")
+        rows.cur.fetchall()
+        return jsonify(rows), 200
+    except Exception as e:
+      return jsonify({"status": "Unable to fetch animes (retry)",
+                      "exception": str(e)}), 500
+  except Exception as e:
+    return jsonify({"status": "Unable to fetch animes",
+                    "exception": str(e)}), 500
+  finally:
+    return_conn(pool, conn)
+
+
+@app.route("/anime/score", methods=['GET'])
+def fetch_anime_score():
+  mediaID = request.args.get('id') 
+
+  url = 'https://graphql.anilist.co'
+  query = '''
+  query($id: Int) {
+    Media(id: $id) {
+      id
+      title {
+        userPreferred
+      }
+      averageScore
+    }
+  }
+  '''
+  variables = {
+    "id": mediaID
+  }
+  response = requests.post(url, json={'query': query, 'variables': variables})
+  return response.json()
+
+@app.route("/anime/scores", methods=['GET'])
+def fetch_anime_scores(mediaIDs):
+  url = 'https://graphql.anilist.co'
+  query = '''
+  query($ids: [Int]){
+    Page {
+      media(id_in: $ids) {
+        id
+        title {
+          english
+        }
+        averageScore
+      }
+    }
+  }
+  '''
+  variables = {
+    "id": mediaIDs
+  }
+  response = requests.post(url, json={'query': query, 'variables': variables})
+  return response.json()
+
+
 @app.route("/heardle/refresh", methods=['POST'])
 def refresh_tracks():
   max_number_tracks = request.get_json()["max_number_tracks"]
   results = []
-  # url = """https://api.animethemes.moe/anime
-  #   ?page[size]=100
-  #   &sort=random
-  #   &include=images,animethemes.animethemeentries.videos.audio,animethemes.song.artists
-  #   &filter[has]=animethemes
-  #   &filter[animetheme][type]=OP
-  #   &fields[anime]=id,name,year,synopsis
-  #   &fields[animetheme]=id,slug
-  #   &fields[animethemeentry]=id
-  #   &fields[video]=id
-  #   &fields[audio]=link
-  #   &fields[artist]=name
-  #   &fields[image]=link
-  # """
   url = """https://api.animethemes.moe/anime?page[size]=100&sort=random&include=images,animethemes.animethemeentries.videos.audio,animethemes.song.artists&filter[has]=animethemes&filter[animetheme][type]=OP&fields[anime]=id,name,year,synopsis&fields[animetheme]=id,slug&fields[animethemeentry]=id&fields[video]=id,link&fields[audio]=link&fields[artist]=name&fields[image]=link"""
 
   missing_data_tracker = {

@@ -22,7 +22,7 @@ def get_daily():
       query = """
         SELECT d.date_chosen, a.anilist_id, a.english_title, a.native_title,
                a.user_preferred_title, a.season_year, a.season, a.num_of_episodes,
-               a.genres, a.tags, a.studios, a.source, d.image_url, d.summary,
+               a.genres, a.tags, a.studios, a.source, a.cover_image, d.summary,
                d.score, d.trailer_url 
         FROM anidle_daily d
         JOIN animes a on a.anilist_id = d.anilist_id
@@ -47,7 +47,7 @@ def get_daily():
       "tags": row[9],
       "studios": row[10],
       "source": row[11],
-      "image_url": row[12], 
+      "cover_image": row[12], 
       "summary": row[13],
       "score": row[14],
       "trailer_url": row[15]
@@ -64,7 +64,7 @@ def get_daily():
         query = """
           SELECT d.date_chosen, a.anilist_id, a.english_title, a.native_title,
                 a.user_preferred_title, a.season_year, a.season, a.num_of_episodes,
-                a.genres, a.tags, a.studios, a.source, d.image_url, d.summary,
+                a.genres, a.tags, a.studios, a.source, a.cover_image, d.summary,
                 d.score, d.trailer_url
           FROM anidle_daily d
           JOIN animes a on a.anilist_id = d.anilist_id
@@ -91,7 +91,7 @@ def get_daily():
           "tags": row[9],
           "studios": row[10],
           "source": row[11],
-          "image_url": row[12], 
+          "cover_image": row[12], 
           "summary": row[13],
           "score": row[14],
           "trailer_url": row[15]
