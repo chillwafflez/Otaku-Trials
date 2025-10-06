@@ -5,7 +5,7 @@ import { saveAnidleGameState, fetchAnidleGameState, clearAnidleGameState } from 
 import { FaArrowUpLong } from "react-icons/fa6";
 import { FaArrowDownLong } from "react-icons/fa6";
 // import { AnidleResult } from "../components/Anidle/AnidleResult.tsx";
-
+import { ClueBox } from "../components/Anidle/ClueBox.tsx";
 
 function Anidle() {
   const url = "http://127.0.0.1:5000/"
@@ -172,7 +172,7 @@ function Anidle() {
       // reset input
       setQuery("");
       setGuess(null);
-      setText(`Guess ${guesses.length + 1}/20`);
+      setText(`Guess ${guesses.length + 1}`);
     }   
   }
 
@@ -191,7 +191,7 @@ function Anidle() {
     );
   };
 
-
+  
   return (
     <div className="flex flex-col justify-center items-center">
       <h1 className="mt-20 text-white text-4xl lg: 3xl">{text}</h1>
@@ -246,9 +246,12 @@ function Anidle() {
         </div>
       </div>
 
-      <div className="mt-6 w-full px-4"> 
+      {/* {guesses.length >= 3 && <ClueBox anidle={dailyAnidle} guesses={guesses.length}/>} */}
+      <ClueBox anidle={dailyAnidle} guesses={guesses.length}/>
+
+      <div className="mt-3 w-full px-4"> 
         <div className="overflow-x-auto">
-          <table className="w-4/5 mt-8 mx-auto bg-[#1C1C1C]">
+          <table className="w-4/5 my-8 mx-auto bg-[#1C1C1C]">
             <thead>
               <tr>
                 <th className="px-16 py-3 w-16 lg:w-20 text-center text-white font-normal"></th>

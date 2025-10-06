@@ -35,6 +35,7 @@ def pick_daily_anidle(conn, game_date) -> int:
       )
       return cur.rowcount  # 1 if inserted 0 if already present
 
+# fetch daily anidle anime's description, average score, and trailer id
 def fetch_full_anidle_info(conn, game_date):
   with conn.cursor() as cur:
     cur.execute(
@@ -56,9 +57,6 @@ def fetch_full_anidle_info(conn, game_date):
   query = '''
     query getAdditionalInfo($id: Int) {
       Media(id: $id, type: ANIME) {
-        coverImage {
-          large
-        }
         description
         averageScore
         trailer {
@@ -74,7 +72,6 @@ def fetch_full_anidle_info(conn, game_date):
   json = response.json()
 
   media = json['data']['Media']
-  cover_image = media['coverImage']['large']
   description = media['description']
   average_score = media['averageScore']
   trailer_id = media['trailer']['id']
@@ -84,13 +81,12 @@ def fetch_full_anidle_info(conn, game_date):
       cur.execute(
         """
         UPDATE anidle_daily
-          SET image_url = %s,
-            summary = %s,
+          SET summary = %s,
             score = %s,
             trailer_url = %s
         WHERE date_chosen = %s::DATE
         """,
-        (cover_image, description, average_score, trailer_id, game_date),
+        (description, average_score, trailer_id, game_date),
       )
     
   return True, 'ok'
@@ -100,7 +96,7 @@ def main():
   game_date = get_pt_today_date()
   pool, conn = get_conn_from_pool()
   if pool is None or conn is None:
-    print("daily_job: DB connection failed")
+    print("daily_anidle_job: DB connection failed")
     return 2
 
   try:
@@ -119,5 +115,5 @@ if __name__ == "__main__":
   try:
     sys.exit(main())
   except (OperationalError, InterfaceError) as e:
-    print(f"daily_job: connection error: {e}")
+    print(f"daily_anidle_job: connection error: {e}")
     sys.exit(3)
