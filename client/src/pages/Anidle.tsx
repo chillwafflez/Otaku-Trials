@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { FaRegQuestionCircle } from "react-icons/fa";
 import { AnidleAnime, DailyAnidle, AnidleGameState } from "../types/types.ts";
-import { saveAnidleGameState, fetchAnidleGameState, clearAnidleGameState } from "../utils/AnidleGameState.ts";
+import { initState, saveAnidleGameState, fetchAnidleGameState, clearAnidleGameState, addGuess, markCompleted } from "../utils/AnidleGameState.ts";
 import { FaArrowUpLong } from "react-icons/fa6";
 import { FaArrowDownLong } from "react-icons/fa6";
 // import { AnidleResult } from "../components/Anidle/AnidleResult.tsx";
@@ -13,7 +13,7 @@ function Anidle() {
   const [allAnimes, setAllAnimes] = useState<AnidleAnime[]>([]);   // full list
   const [searchResults, setSearchResults] = useState<AnidleAnime[]>([]);     // filtered list that renders upon user input
 
-  // const [gameState, setGameState] = useState<AnidleGameState | null>(null);
+  const [gameState, setGameState] = useState<AnidleGameState | null>(null);
 
   const [query, setQuery] = useState(""); 
   const [guess, setGuess] = useState<AnidleAnime | null>(null);
@@ -101,23 +101,52 @@ function Anidle() {
   useEffect(() => {
     if (!dailyAnidle) return;
 
-    const savedState = fetchAnidleGameState();
+    const savedState = fetchAnidleGameState(dailyAnidle.anilist_id);
     // if there is already a saved state and it matches the current daily song, fetch it (continue where we left off)
-    if (savedState && savedState.dailyID === dailyAnidle.anilist_id) {
-      // setGameState(savedState);
+    if (savedState) {
+      setGameState(savedState);
     } else {
       // new day or no save: start fresh
-      const newState: AnidleGameState = {
-        dailyID: dailyAnidle.anilist_id,
-        guessesIDs: [],
-        status: "IN_PROGRESS",
-        timestamp: Date.now()
-      };
+      const newState: AnidleGameState = initState(dailyAnidle.anilist_id);
       clearAnidleGameState();             // clears old day’s state if there is any
-      // setGameState(newState);
       saveAnidleGameState(newState);      // save new game state into LS
+      setGameState(newState);
     }
   }, [dailyAnidle]);
+
+  // when allAnimes or game state changes repopulate UI to display guesses
+  useEffect(() => {
+    if (!gameState || allAnimes.length === 0) return;
+
+    // map each anime to its anilist id
+    const byId = new Map(allAnimes.map(a => [a.anilist_id, { ...a }]));
+
+    // create map for each cached guess in ls
+    const cacheById = new Map(
+      (gameState.guessCache ?? []).map(c => [c.id, c])
+    );
+
+    // merge cached data with allAnimes data
+    const visible = gameState.guessesIDs.map((id) => {
+      const base = byId.get(id);
+      if (!base) {
+        return null;
+      }
+      const cachedGuess = cacheById.get(id);
+
+      // fetch scores from cached data and insert into the animes the user guessed (so we dont gotta call anilist api again)
+      if (cachedGuess && cachedGuess.score != null) {
+        base.score = cachedGuess.score as number;
+      }
+      return base;
+    }).filter(Boolean) as AnidleAnime[];
+
+    setGuesses(visible);
+
+    if (visible.length > 0) {
+      setText(`Guess ${guesses.length + 1}`);
+    }
+  }, [gameState, allAnimes]);
 
 
   // ---- handlers ---- //
@@ -152,28 +181,42 @@ function Anidle() {
   }
 
   const handleGuessSubmit = async () => {
-    if (solved || !guess) return;
+    if (solved || !guess || !gameState || !dailyAnidle) return;
 
+    // fetch anime's score from AniList API
     const score = await fetchAnimeScore(guess.anilist_id);
     guess.score = score ?? -1;
 
     // dont allow user to choose the same anime multiple times (prevents dupes)
     if (!guesses.some(g => g.anilist_id === guess.anilist_id)) {
       setGuesses(prev => [...prev, guess]);
-
-      // add stuff to save game state
     }
 
-    if (dailyAnidle && guess.anilist_id === dailyAnidle.anilist_id) {
+    // build next state
+    const cache = {
+      id: guess.anilist_id,
+      title: guess.english_title || guess.user_preferred_title,
+      cover_image: guess.cover_image,
+      score: guess.score
+    };
+    let nextState = addGuess(gameState, guess.anilist_id, cache);
+
+    if (guess.anilist_id === dailyAnidle.anilist_id) {
       console.log("user guessed correctly!");
+
+      nextState = markCompleted(nextState)
       setText("Yippee, you got it!");
       setSolved(true);
     } else {
-      // reset input
-      setQuery("");
-      setGuess(null);
       setText(`Guess ${guesses.length + 1}`);
     }   
+
+    saveAnidleGameState(nextState);
+    setGameState(nextState);
+
+    // reset input
+    setQuery("");
+    setGuess(null);
   }
 
 
