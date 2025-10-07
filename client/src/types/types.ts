@@ -79,15 +79,31 @@ export interface DailyAnidle {
   tags: string[];
   studios: string[];
   source: string;
-  image_url: string;
+  cover_image: string;
   summary: string;
   score: number;
   trailer_url: string;
 }
 
+
+export type GameStatus = "IN_PROGRESS" | "COMPLETED" | "FAILED";
+export type ClueKey = "clue1" | "clue2" | "clue3";
+
+export interface GuessCache {
+  id: number;
+  title: string;
+  cover_image?: string;
+  score: number;
+}
+
 export interface AnidleGameState {
   dailyID: number;
+  status: GameStatus;
+  startedAt: number;
+  solvedAt: number | null;
   guessesIDs: number[];
-  status: string;
-  timestamp: number;  // when the user started the game
+
+  openClue: ClueKey | null;
+  unlocked: { clue1: boolean; clue2: boolean; clue3: boolean };
+  guessCache?: GuessCache[]; // tiny snapshot for instant UI
 }

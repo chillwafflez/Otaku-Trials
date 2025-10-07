@@ -26,7 +26,7 @@ function ClueBox(props: {anidle: DailyAnidle | null, guesses: number }) {
 
   if (props.guesses < 3) {
     return (
-      <div className="flex w-4/5 lg:w-1/5 p-5 mt-4 justify-center text-center text-white">
+      <div className="flex w-4/5 lg:w-1/5 mt-4 justify-center text-center text-white">
         <span>First clue unlocks after {6 - props.guesses} tries</span>
       </div>
     )
@@ -92,7 +92,7 @@ function ClueBox(props: {anidle: DailyAnidle | null, guesses: number }) {
       {/* display clue */}
       {currentClue === 'clue1' && showClue && props.guesses > 5 && (
         <div className="w-3/5 mt-8 mx-auto shadow-md overflow-hidden">
-          <img src={props.anidle?.cover_image} className="  blur-[6px] border"/>
+          <img src={props.anidle?.cover_image} className="  blur-[7px] border"/>
         </div>
       )}
 
