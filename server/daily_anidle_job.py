@@ -62,8 +62,22 @@ def fetch_full_anidle_info(conn, game_date):
         trailer {
           id
         }
+        mainCharacters: characters(sort: FAVOURITES_DESC, role: MAIN, page: 1, perPage: 3) {
+          nodes {
+              id
+              name {
+                  full
+                  native
+              }
+              image {
+                large
+                medium
+              }
+              favourites
+            }
+          }
+        }
       }
-    }
     '''
   variables = {
       "id": anilist_id
@@ -76,6 +90,22 @@ def fetch_full_anidle_info(conn, game_date):
   average_score = media['averageScore']
   trailer_id = media['trailer']['id']
 
+  character_image_links = []
+  main_characters = media['mainCharacters']['nodes']
+  if main_characters:
+    if len(main_characters) > 3:
+      for i in range(3):
+        image_link = main_characters[i]['image'].get('extraLarge') or {}
+        if not image_link:
+          image_link = main_characters[i]['image'].get('large')
+        character_image_links.append(image_link)
+    else:
+      for character in main_characters:
+        image_link = character['image'].get('extraLarge') or {}
+        if not image_link:
+          image_link = character['image'].get('large')
+        character_image_links.append(image_link)     
+
   with conn:
     with conn.cursor() as cur:
       cur.execute(
@@ -83,10 +113,11 @@ def fetch_full_anidle_info(conn, game_date):
         UPDATE anidle_daily
           SET summary = %s,
             score = %s,
-            trailer_url = %s
+            trailer_url = %s,
+            top_three_characters = %s
         WHERE date_chosen = %s::DATE
         """,
-        (description, average_score, trailer_id, game_date),
+        (description, average_score, trailer_id, character_image_links, game_date),
       )
     
   return True, 'ok'
