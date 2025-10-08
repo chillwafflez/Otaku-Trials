@@ -1,4 +1,4 @@
-import { AnidleGameState, GuessCache  } from "../types/types.ts";
+import { AnidleGameState, GuessCache, ClueKey  } from "../types/types.ts";
 
 
 export function initState(dailyID: number): AnidleGameState {
@@ -10,6 +10,7 @@ export function initState(dailyID: number): AnidleGameState {
     guessesIDs: [],
     openClue: null,
     unlocked: { clue1: false, clue2: false, clue3: false },
+    used: { clue1: false, clue2: false, clue3: false },
     guessCache: [],
   };
 }
@@ -74,4 +75,12 @@ export function markCompleted(state: AnidleGameState): AnidleGameState {
     return state;
   }
   return { ...state, status: "COMPLETED", solvedAt: Date.now() };
+}
+
+export function markClueUsed(state: AnidleGameState, key: ClueKey): AnidleGameState {
+  // if clue is locked or already used ignore
+  if (!state.unlocked[key] || state.used[key]) {
+    return state;
+  } 
+  return { ...state, used: { ...state.used, [key]: true } };
 }

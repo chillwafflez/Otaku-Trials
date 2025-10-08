@@ -2,111 +2,67 @@ import { DailyAnidle } from "../../types/types";
 import { IoMdPeople } from "react-icons/io";
 import { RiScreenshot2Line } from "react-icons/ri";
 import { LuNotepadText } from "react-icons/lu";
+import { ClueButton } from "./ClueButton";
 import { useState } from "react";
 
 type ClueKey = 'clue1' | 'clue2' | 'clue3';
 
-function ClueBox(props: {anidle: DailyAnidle | null, guesses: number }) {
+function ClueBox({anidle, guesses, unlocked, used, onUse}: {
+    anidle: DailyAnidle | null; 
+    guesses: number;
+    unlocked: Record<ClueKey, boolean>; // which clues have been unlocked
+    used: Record<ClueKey, boolean>; // which clues have been used
+    onUse: (key: ClueKey) => void;      // mark clue as used
+  }) {
+
+  const [openKey, setOpenKey] = useState<ClueKey | null>(null);
   
-  const [currentClue, setCurrentClue] = useState<ClueKey | null>(null);
-  const [showClue, setShowClue] = useState<boolean>(false);
-
-  const handleClueChange = (clue: ClueKey) => {
-    if (clue === currentClue) {
-      setShowClue(!showClue);
-    } else {
-      setCurrentClue(clue);
-      setShowClue(true);
-    }
-  }
-
-  if (props === null) {
-    return
-  }
-
-  if (props.guesses < 3) {
-    return (
-      <div className="flex w-4/5 lg:w-1/5 mt-4 justify-center text-center text-white">
-        <span>First clue unlocks after {6 - props.guesses} tries</span>
-      </div>
-    )
-  }
+  const handleIconClick = (key: ClueKey) => {
+    if (!unlocked[key]) return;
+    // if first time clicking after unlock, mark as used (persist) once
+    if (!used[key]) onUse(key);
+    setOpenKey(prev => (prev === key ? null : key));
+  };
 
   return (
     <div className="flex flex-col w-4/5 lg:w-1/5 p-5 mt-8 bg-[#1C1C1C] justify-center text-center">
       <h1 className="text-white text-lg">Clues</h1>
-      <hr className="mt-3 bg-blue-600"></hr>
+      <hr className="mt-3"></hr>
 
       {/* displaying clue icons */}
       <div className="mt-4 grid grid-cols-3 gap-6 justify-items-center">
-        <button
-          type="button"
-          onClick={() => handleClueChange('clue1')}
-          className={`flex flex-col items-center gap-1 text-center cursor-pointer
-                      ${props.guesses >= 6 ? "hover:text-bar1" : "text-gray-500"}
-                      ${currentClue === 'clue1' && showClue ? "text-bar1" : "text-white"}`}>
-          <RiScreenshot2Line className="w-12 h-12" />
-          <div className="text-xs">
-            Image Clue
-            <br />
-            <span className={props.guesses >= 6 ? "opacity-0" : ""}>
-              in {6 - props.guesses} tries
-            </span>
-          </div>
-        </button>
+        <ClueButton guesses={guesses} keyName="clue1" label="Image Clue" Icon={RiScreenshot2Line} 
+                             threshold={6} unlocked={unlocked} used={used} isOpen={openKey === 'clue1'}
+                             onClick={handleIconClick}/>
 
-        <button
-          type="button"
-          onClick={() => handleClueChange('clue2')}
-          className={`flex flex-col items-center gap-1 text-center cursor-pointer
-                      ${props.guesses >= 12 ? "hover:text-bar1" : "text-gray-500"}
-                      ${currentClue === 'clue2' && showClue ? "text-bar1" : "text-white"}`}>
-          <IoMdPeople className="w-12 h-12" />
-          <div className="text-xs">
-            Character Clue
-            <br />
-            <span className={props.guesses >= 12 ? "opacity-0" : ""}>
-              in {12 - props.guesses} tries
-            </span>
-          </div>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleClueChange('clue3')}
-          className={`flex flex-col items-center gap-1 text-center cursor-pointer
-                      ${props.guesses >= 18 ? "hover:text-bar1" : "text-gray-500"}
-                      ${currentClue === 'clue3' && showClue ? "text-bar1" : "text-white"}`}>
-          <LuNotepadText className="w-12 h-12" />
-          <div className="text-xs ">
-            Summary Clue
-            <br />
-            <span className={props.guesses >= 18 ? "opacity-0" : ""}>
-              in {18 - props.guesses} tries
-            </span>
-          </div>
-        </button>
+        <ClueButton guesses={guesses} keyName="clue2" label="Character Clue" Icon={IoMdPeople} 
+                             threshold={12} unlocked={unlocked} used={used} isOpen={openKey === 'clue2'} 
+                             onClick={handleIconClick}/>
+                        
+        <ClueButton guesses={guesses} keyName="clue3" label="Summary Clue" Icon={LuNotepadText} 
+                             threshold={18} unlocked={unlocked} used={used} isOpen={openKey === 'clue3'}
+                             onClick={handleIconClick}/>
       </div>
 
 
       {/* display clue */}
-      {currentClue === 'clue1' && showClue && props.guesses > 5 && (
+      {openKey === 'clue1' && unlocked.clue1 && (
         <div className="w-3/5 mt-8 mx-auto shadow-md overflow-hidden">
-          <img src={props.anidle?.cover_image} className="  blur-[7px] border"/>
+          <img src={anidle?.cover_image} className="blur-[7px] border"/>
         </div>
       )}
 
-      {currentClue === 'clue2' && showClue && props.guesses > 11 && (
+      {openKey === 'clue2' && unlocked.clue2 && (
         <div className="flex w-full mt-8 justify-between items-center">
-          <img src="https://s4.anilist.co/file/anilistcdn/character/large/b281109-SRUQVkT7DYyg.jpg" className="w-24"></img>
-          <img src="https://s4.anilist.co/file/anilistcdn/character/large/b281110-WxqeTYKB8XdD.jpg" className="w-24"></img>
-          <img src="https://s4.anilist.co/file/anilistcdn/character/large/b359202-syrbw7pLHUB7.jpg" className="w-24"></img>
+          {anidle?.top_three_characters.map((result) => (
+            <img key={result} src={result} className="w-24 lg:w-[6.5rem]"></img>
+          ))}
         </div>
       )}
 
-      {currentClue === 'clue3' && showClue && props.guesses > 17 && (
+      {openKey === 'clue3' && unlocked.clue3 && (
         <p className="text-white mt-5 text-sm">
-          {props.anidle?.summary}
+          {anidle?.shortened_summary ? anidle?.shortened_summary : anidle?.summary}
         </p>
       )}
     </div>

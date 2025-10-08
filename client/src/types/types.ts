@@ -83,6 +83,8 @@ export interface DailyAnidle {
   summary: string;
   score: number;
   trailer_url: string;
+  top_three_characters: string[];
+  shortened_summary: string;
 }
 
 
@@ -105,5 +107,6 @@ export interface AnidleGameState {
 
   openClue: ClueKey | null;
   unlocked: { clue1: boolean; clue2: boolean; clue3: boolean };
+  used: { clue1: boolean; clue2: boolean; clue3: boolean }; 
   guessCache?: GuessCache[]; // tiny snapshot for instant UI
 }
