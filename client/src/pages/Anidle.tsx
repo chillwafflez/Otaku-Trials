@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { FaRegQuestionCircle } from "react-icons/fa";
 import { AnidleAnime, DailyAnidle, AnidleGameState } from "../types/types.ts";
-import { initState, saveAnidleGameState, fetchAnidleGameState, clearAnidleGameState, addGuess, markCompleted } from "../utils/AnidleGameState.ts";
+import { initState, saveAnidleGameState, fetchAnidleGameState, clearAnidleGameState, addGuess, markCompleted, markClueUsed } from "../utils/AnidleGameState.ts";
 import { FaArrowUpLong } from "react-icons/fa6";
 import { FaArrowDownLong } from "react-icons/fa6";
 // import { AnidleResult } from "../components/Anidle/AnidleResult.tsx";
@@ -289,8 +289,21 @@ function Anidle() {
         </div>
       </div>
 
-      {/* {guesses.length >= 3 && <ClueBox anidle={dailyAnidle} guesses={guesses.length}/>} */}
-      <ClueBox anidle={dailyAnidle} guesses={guesses.length}/>
+      <ClueBox 
+        anidle={dailyAnidle} guesses={guesses.length} 
+        unlocked={gameState?.unlocked ?? { clue1:false, clue2:false, clue3:false }}
+        used={gameState?.used ?? { clue1:false, clue2:false, clue3:false }}
+        onUse={(key) => {
+          // ignore if clue isnt unlocked yet
+          if (!gameState || !gameState.unlocked[key] || gameState.used[key]) {
+            return;
+          } 
+          const next = markClueUsed(gameState, key);
+          if (next !== gameState) {
+            saveAnidleGameState(next)
+            setGameState(next);
+          }
+        }}/>
 
       <div className="mt-3 w-full px-4"> 
         <div className="overflow-x-auto">

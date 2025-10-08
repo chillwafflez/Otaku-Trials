@@ -88,7 +88,7 @@ def fetch_full_anidle_info(conn, game_date):
   media = json['data']['Media']
   description = media['description']
   average_score = media['averageScore']
-  trailer_id = media['trailer']['id']
+  trailer_id = media['trailer']['id'] if media['trailer'] else None
 
   character_image_links = []
   main_characters = media['mainCharacters']['nodes']

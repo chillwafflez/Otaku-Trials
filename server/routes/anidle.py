@@ -23,7 +23,7 @@ def get_daily():
         SELECT d.date_chosen, a.anilist_id, a.english_title, a.native_title,
                a.user_preferred_title, a.season_year, a.season, a.num_of_episodes,
                a.genres, a.tags, a.studios, a.source, a.cover_image, d.summary,
-               d.score, d.trailer_url 
+               d.score, d.trailer_url, d.top_three_characters, d.shortened_summary
         FROM anidle_daily d
         JOIN animes a on a.anilist_id = d.anilist_id
         WHERE d.date_chosen = %s::DATE;        
@@ -50,7 +50,9 @@ def get_daily():
       "cover_image": row[12], 
       "summary": row[13],
       "score": row[14],
-      "trailer_url": row[15]
+      "trailer_url": row[15],
+      "top_three_characters": row[16],
+      "shortened_summary": row[17]
     }), 200
   
   # retry once if neon dropped SSL connection
@@ -65,7 +67,7 @@ def get_daily():
           SELECT d.date_chosen, a.anilist_id, a.english_title, a.native_title,
                 a.user_preferred_title, a.season_year, a.season, a.num_of_episodes,
                 a.genres, a.tags, a.studios, a.source, a.cover_image, d.summary,
-                d.score, d.trailer_url
+                d.score, d.trailer_url, d.top_three_characters, d.shortened_summary
           FROM anidle_daily d
           JOIN animes a on a.anilist_id = d.anilist_id
           WHERE d.date_chosen = %s::DATE;        
@@ -94,7 +96,9 @@ def get_daily():
           "cover_image": row[12], 
           "summary": row[13],
           "score": row[14],
-          "trailer_url": row[15]
+          "trailer_url": row[15],
+          "top_three_characters": row[16],
+          "shortened_summary": row[17]
         }
       }), 200
     except Exception as e:
