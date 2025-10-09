@@ -84,3 +84,21 @@ export function markClueUsed(state: AnidleGameState, key: ClueKey): AnidleGameSt
   } 
   return { ...state, used: { ...state.used, [key]: true } };
 }
+
+  // compare two arrays and returns an array specifying matching values (for comparing genres, tags, etc.)
+export const overlap = (mystery: string[] = [], guess: string[] = []) => {
+  if (!mystery?.length || !guess?.length) {
+    return [];
+  }
+  const correctItems = new Set(mystery.map(x => x.toLowerCase()));
+
+  const hits: [string, boolean][] = [];
+  guess.map(item => {
+    if (correctItems.has(item.toLowerCase())) {
+      hits.push([item, true]);
+    } else {
+      hits.push([item, false]);
+    }
+  })
+  return hits;
+};
