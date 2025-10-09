@@ -6,12 +6,14 @@ import { FaArrowUpLong } from "react-icons/fa6";
 import { FaArrowDownLong } from "react-icons/fa6";
 import { AnidleResult } from "../components/Anidle/AnidleResult.tsx";
 import { ClueBox } from "../components/Anidle/ClueBox.tsx";
+import { AboutAnidleModal } from "../components/Anidle/AboutAnidleModal.tsx";
 
 function Anidle() {
   const url = "https://chillwafflez.pythonanywhere.com/"
   const [dailyAnidle, setDailyAnidle] = useState<DailyAnidle | null>(null);
   const [allAnimes, setAllAnimes] = useState<AnidleAnime[]>([]);   // full list
   const [searchResults, setSearchResults] = useState<AnidleAnime[]>([]);     // filtered list that renders upon user input
+  const [modalVisible, setModalVisible] = useState(false);
 
   const [gameState, setGameState] = useState<AnidleGameState | null>(null);
 
@@ -232,7 +234,8 @@ function Anidle() {
 
       <div className="hidden sm:flex w-full mt-10 items-center justify-center space-x-4">
         <div className="flex flex-1 justify-end space-x-2">
-          <FaRegQuestionCircle className="text-white hover:text-bar1 w-8 h-8 cursor-pointer" />
+          <FaRegQuestionCircle className="text-white hover:text-bar1 w-8 h-8 cursor-pointer"
+                               onClick={() => setModalVisible(true)} />
         </div>
 
         <div className="w-4/5 lg:w-1/3 h-full relative">
@@ -273,7 +276,7 @@ function Anidle() {
         <div className="flex w-4/5 mt-3 items-center justify-between">
             <div className="flex space-x-1">
               <FaRegQuestionCircle className="text-white hover:text-bar1 w-8 h-8 cursor-pointer"
-                                    />
+                                   onClick={() => setModalVisible(true)}/>
             </div>
             <button className="border text-white py-2 px-3 text-lg"
                     onClick={handleGuessSubmit}>Enter</button>
@@ -384,6 +387,8 @@ function Anidle() {
         />
       )}
       <div ref={scrollToSuccess}></div>
+
+      {modalVisible && <AboutAnidleModal onClose={() => setModalVisible(false)} />}
 
     </div>
   )
