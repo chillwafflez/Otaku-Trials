@@ -8,7 +8,7 @@ import { AnidleResult } from "../components/Anidle/AnidleResult.tsx";
 import { ClueBox } from "../components/Anidle/ClueBox.tsx";
 
 function Anidle() {
-  const url = "http://127.0.0.1:5000/"
+  const url = "https://chillwafflez.pythonanywhere.com/"
   const [dailyAnidle, setDailyAnidle] = useState<DailyAnidle | null>(null);
   const [allAnimes, setAllAnimes] = useState<AnidleAnime[]>([]);   // full list
   const [searchResults, setSearchResults] = useState<AnidleAnime[]>([]);     // filtered list that renders upon user input
