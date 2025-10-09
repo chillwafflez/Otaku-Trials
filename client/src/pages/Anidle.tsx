@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState  } from "react";
 import { FaRegQuestionCircle } from "react-icons/fa";
 import { AnidleAnime, DailyAnidle, AnidleGameState } from "../types/types.ts";
-import { initState, saveAnidleGameState, fetchAnidleGameState, clearAnidleGameState, addGuess, markCompleted, markClueUsed } from "../utils/AnidleGameState.ts";
+import { initState, saveAnidleGameState, fetchAnidleGameState, clearAnidleGameState, addGuess, markCompleted, markClueUsed, overlap } from "../utils/AnidleGameState.ts";
 import { FaArrowUpLong } from "react-icons/fa6";
 import { FaArrowDownLong } from "react-icons/fa6";
-// import { AnidleResult } from "../components/Anidle/AnidleResult.tsx";
+import { AnidleResult } from "../components/Anidle/AnidleResult.tsx";
 import { ClueBox } from "../components/Anidle/ClueBox.tsx";
 
 function Anidle() {
@@ -20,6 +20,7 @@ function Anidle() {
   const [guesses, setGuesses] = useState<AnidleAnime[]>([]);
   const [text, setText] = useState("Guess an Anime!");
   const [solved, setSolved] = useState(false);
+  const scrollToSuccess = useRef<HTMLDivElement | null>(null);
 
   // ---- functions ---- //
 
@@ -71,24 +72,6 @@ function Anidle() {
     }
   }
 
-  // compare two arrays and returns an array specifying matching values (for comparing genres, tags, etc.)
-  const overlap = (mystery: string[] = [], guess: string[] = []) => {
-    if (!mystery?.length || !guess?.length) {
-      return [];
-    }
-    const correctItems = new Set(mystery.map(x => x.toLowerCase()));
-
-    const hits: [string, boolean][] = [];
-    guess.map(item => {
-      if (correctItems.has(item.toLowerCase())) {
-        hits.push([item, true]);
-      } else {
-        hits.push([item, false]);
-      }
-    })
-    return hits;
-  };
-
   // ---- effects ---- //
 
   // fetch daily anidle anime once on mount
@@ -105,6 +88,10 @@ function Anidle() {
     // if there is already a saved state and it matches the current daily song, fetch it (continue where we left off)
     if (savedState) {
       setGameState(savedState);
+
+      if (savedState.status === 'COMPLETED') {
+        setSolved(true);
+      }
     } else {
       // new day or no save: start fresh
       const newState: AnidleGameState = initState(dailyAnidle.anilist_id);
@@ -148,6 +135,10 @@ function Anidle() {
     }
   }, [gameState, allAnimes]);
 
+  // automatically scrolls to success modal when solved changes
+  useEffect(() => {
+    scrollToSuccess.current?.scrollIntoView({ behavior: "smooth" });
+  }, [solved]);
 
   // ---- handlers ---- //
 
@@ -384,7 +375,15 @@ function Anidle() {
       </div>
 
 
-      {/* {solved && <AnidleResult success=/>} */}
+      {solved && dailyAnidle && (
+        <AnidleResult
+          success={solved}
+          dailyAnidle={dailyAnidle}
+          guesses={guesses}
+          used={gameState?.used ?? { clue1:false, clue2:false, clue3:false }}
+        />
+      )}
+      <div ref={scrollToSuccess}></div>
 
     </div>
   )
