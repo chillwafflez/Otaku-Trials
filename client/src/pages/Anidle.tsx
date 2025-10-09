@@ -7,6 +7,7 @@ import { FaArrowDownLong } from "react-icons/fa6";
 import { AnidleResult } from "../components/Anidle/AnidleResult.tsx";
 import { ClueBox } from "../components/Anidle/ClueBox.tsx";
 import { AboutAnidleModal } from "../components/Anidle/AboutAnidleModal.tsx";
+import { LoadingSpinner } from "../components/LoadingSpinner.tsx";
 
 function Anidle() {
   const url = "https://chillwafflez.pythonanywhere.com/"
@@ -23,26 +24,29 @@ function Anidle() {
   const [text, setText] = useState("Guess an Anime!");
   const [solved, setSolved] = useState(false);
   const scrollToSuccess = useRef<HTMLDivElement | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // ---- functions ---- //
 
   // fetch daily mystery anime
-  const fetchDailyAnidle = async () => {
+  const fetchDailyAnidle = async (): Promise<boolean> => {
     try {
       const res = await fetch(url + "anidle/daily");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: DailyAnidle = await res.json();
       setDailyAnidle(data);
-      // console.log(data);
+      return true;
     } catch (error) {
       console.error("Failed to fetch daily anidle anime:", error);
+      return false;
     }
   };
 
   // fetch all animes and their info from database (for fast lookup)
-  const fetchAnimes = async() => {
+  const fetchAnimes = async(): Promise<boolean> => {
     try {
       const response = await fetch(url + "anime");
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const json = await response.json();
       const animes: AnidleAnime[] = [];
       
@@ -52,9 +56,10 @@ function Anidle() {
 
       setAllAnimes(animes);
       setSearchResults([]);
-      // console.log("Fetched all animes!");
+      return true;
     } catch (error) {
-      console.error(error);
+      console.error("Failed to fetch all anime data:", error);
+      return false;
     }
   }
 
@@ -78,9 +83,26 @@ function Anidle() {
 
   // fetch daily anidle anime once on mount
   useEffect(() => {
-    fetchDailyAnidle();
-    fetchAnimes();
-  }, []);
+    let cancelled = false;
+
+    (async () => {
+      setLoading(true);
+      const [okDaily, okAnimes] = await Promise.all([
+        fetchDailyAnidle(),
+        fetchAnimes(),
+      ]);
+
+      if (!cancelled) {
+        if (!okDaily || !okAnimes) {
+          console.log("daily Anidle or other anime data");
+        }
+        setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };}, []);
 
   // when the daily anidle arrives, load/init game state
   useEffect(() => {
@@ -227,6 +249,14 @@ function Anidle() {
     );
   };
 
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-[#0F0F0F]">
+        <LoadingSpinner />
+      </div>
+    );
+  }
   
   return (
     <div className="flex flex-col justify-center items-center">
